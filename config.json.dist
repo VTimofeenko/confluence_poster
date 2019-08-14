@@ -1,0 +1,12 @@
+{
+    "file_to_open": "",
+    "auth" : {
+        "confluence_url": "",
+        "username": "",
+        "password": ""
+    },
+    "author_to_check": "",
+    "page" : {
+        "title": "",
+        "space": ""}
+}
