@@ -1,6 +1,9 @@
 # only include .dist
 config.json
 
+# exclude build area for zipapp
+build_area/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
