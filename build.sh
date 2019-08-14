@@ -12,7 +12,7 @@ echo "Clearing __pycache__"
 rm -rf build_area/__pycache__/
 
 echo "Building zipapp"
-python3.6 -m zipapp build_area/ -o distribs/post_to_confluence -p "python3.6"
+python3.6 -m zipapp build_area/ -o distribs/post_to_confluence -p "$(which python3.6)"
 
 echo "Copying config dist"
 cp -f config.json.dist distribs/

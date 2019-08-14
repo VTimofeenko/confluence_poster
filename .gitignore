@@ -7,6 +7,9 @@ build_area/
 # distrib area
 distribs/
 
+# MISC
+pip-selfcheck.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

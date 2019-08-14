@@ -3,7 +3,8 @@
     "auth" : {
         "confluence_url": "",
         "username": "",
-        "password": ""
+        "password": "",
+		"is_cloud": false
     },
     "author_to_check": "",
     "page" : {
