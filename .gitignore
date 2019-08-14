@@ -4,6 +4,9 @@ config.json
 # exclude build area for zipapp
 build_area/
 
+# distrib area
+distribs/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
