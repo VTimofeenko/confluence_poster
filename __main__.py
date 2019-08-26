@@ -21,6 +21,12 @@ def update_page_with_content(file_with_content, page_id, title,
                                         minor_edit=False)
 
 
+"""Links:
+* https://atlassian-python-api.readthedocs.io/en/latest/
+* https://github.com/atlassian-api/atlassian-python-api
+"""
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default="config.json",
@@ -68,6 +74,7 @@ def main():
 
     # Check if the page was modified last by AUTHOR_TO_CHECK. If not - error
     if not args.force:
+        # TODO: handle no page found
         page_update = confluence.get_page_by_id(page_id, expand="version")
         if api_version == 'cloud':
             last_updated_by = page_update['version']['by']['email']
