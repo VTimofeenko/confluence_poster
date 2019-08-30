@@ -8,6 +8,7 @@ build_area/
 distribs/
 
 # MISC
+test_api.confluencewiki
 pip-selfcheck.json
 
 # Byte-compiled / optimized / DLL files
