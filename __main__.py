@@ -70,11 +70,29 @@ def main():
     else:
         title = poster_config["page"]["title"]
 
+    logging.debug("Looking for the page")
+    space = poster_config["page"]["space"]
+    if confluence.page_exists(space, title):
+        pass
+    else:
+        create = input(f"Page not found. Create page called {title} in space "
+                       f"{space}? (Y/N) ")
+        if create.lower() == 'y':
+            # TODO: suboptimal metohd, page is updated later
+            # TODO: handle different parent
+            confluence.create_page(space, title, body="")  # TODO suboptimal
+        elif create.lower() == 'n':
+            logging.info("OK. exiting")
+            sys.exit()
+        else:
+            logging.info("Assuming no, exiting")
+            sys.exit()
+
     page_id = confluence.get_page_id(poster_config["page"]["space"], title)
+    logging.debug(f"Found the page {page_id}")
 
     # Check if the page was modified last by AUTHOR_TO_CHECK. If not - error
     if not args.force:
-        # TODO: handle no page found
         page_update = confluence.get_page_by_id(page_id, expand="version")
         if api_version == 'cloud':
             last_updated_by = page_update['version']['by']['email']
@@ -90,8 +108,8 @@ def main():
             logging.error("Aborting")
             sys.exit()
         else:
-            logging.info("Checked last author, it's {last_updated_by}, like in\
-config, proceeding")
+            logging.info(f"Checked last author, it's {last_updated_by}, like "
+                         "in config, proceeding")
 
     # Update the page with contents from FILE_TO_OPEN
     logging.info("Updating the page")
