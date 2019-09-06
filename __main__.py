@@ -52,7 +52,7 @@ def create_under_parent(space, confluence_instance):
     return None
 
 
-def main():
+def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default="config.json",
                         help="the file with the config")
@@ -64,8 +64,11 @@ def main():
                         action='store_true')
     parser.add_argument("--page_title", help="Allows overriding page title from\
                         config")
-    args = parser.parse_args()
+    return(parser.parse_args())
 
+
+def main():
+    args = parse_args()
     if not args.debug:
         logging.basicConfig(level=logging.INFO,
                             format='%(asctime)s %(levelname)s %(message)s')
