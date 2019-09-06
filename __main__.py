@@ -11,6 +11,11 @@ import argparse
 import json
 import sys
 
+"""Links:
+* https://atlassian-python-api.readthedocs.io/en/latest/
+* https://github.com/atlassian-api/atlassian-python-api
+"""
+
 
 def update_page_with_content(file_with_content, page_id, title,
                              confluence_instance):
@@ -21,10 +26,30 @@ def update_page_with_content(file_with_content, page_id, title,
                                         minor_edit=False)
 
 
-"""Links:
-* https://atlassian-python-api.readthedocs.io/en/latest/
-* https://github.com/atlassian-api/atlassian-python-api
-"""
+def create_under_parent(space, confluence_instance):
+    find_parent = input("Do you want to look for parent page "
+                        f"in the space \"{space}\"? (Y/N/(A)bort) ")
+    if find_parent.lower() == 'y':
+        cont = True
+        while cont:
+            parent_name = input("Which page should the script "
+                                "look for?\n")
+            if confluence_instance.page_exists(space,
+                                               parent_name):
+                parent_id = confluence_instance.get_page_id(space, parent_name)
+                return parent_id
+            else:
+                c = input(f"Did not find page by '{parent_name}'. "
+                          "Search again? (Y/N) ")
+                if c.lower() == 'y':
+                    cont = True
+                else:
+                    cont = False
+    elif find_parent.lower() == "a" or find_parent == "Abort":
+        logging.info("Aborting")
+    else:
+        logging.info("Not creating under a parent")
+    return None
 
 
 def main():
@@ -79,8 +104,8 @@ def main():
                        f"{space}? (Y/N) ")
         if create.lower() == 'y':
             # TODO: suboptimal metohd, page is updated later
-            # TODO: handle different parent
-            confluence.create_page(space, title, body="")  # TODO suboptimal
+            parent_id = create_under_parent(space, confluence)
+            confluence.create_page(space, title, body="", parent_id=parent_id)
         elif create.lower() == 'n':
             logging.info("OK. exiting")
             sys.exit()
