@@ -55,19 +55,20 @@ def create_under_parent(space, confluence_instance):
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", default="config.json",
-                        help="the file with the config")
     parser.add_argument("--password", required=True,
                         help="your confluence password")
+    parser.add_argument("--config", default="config.json",
+                        help="the file with the config"
+                        "by default - config.json in same folder")
     parser.add_argument("--force", help="Force write the page, even if the last\
                         author is different", action='store_true')
-    parser.add_argument("--debug", help="Enable debug logging",
-                        action='store_true')
     parser.add_argument("--page_title", help="Allows overriding page title from\
                         config")
     parser.add_argument("--upload_files", nargs="+",
                         help="Filenames to upload as "
                         "attachments to page_title")
+    parser.add_argument("--debug", help="Enable debug logging",
+                        action='store_true')
     return(parser.parse_args())
 
 
