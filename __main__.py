@@ -10,6 +10,7 @@ from atlassian import Confluence
 import argparse
 import json
 import sys
+import pathlib
 
 """Links:
 * https://atlassian-python-api.readthedocs.io/en/latest/
@@ -64,6 +65,8 @@ def parse_args():
                         action='store_true')
     parser.add_argument("--page_title", help="Allows overriding page title from\
                         config")
+    parser.add_argument("--upload_file", help="Filename to upload as "
+                        "attachment to page_title")
     return(parser.parse_args())
 
 
@@ -148,6 +151,13 @@ def main():
         logging.exception(e)
     else:
         logging.info("Update OK")
+    if args.upload_file:
+        logging.info("Uploading the file")
+        uploaded_file_path = pathlib.Path(args.upload_file)
+        confluence.attach_file(uploaded_file_path,
+                               name=uploaded_file_path.name,
+                               content_type=None, page_id=page_id)
+        logging.info("Done upload")
 
 
 if __name__ == "__main__":
