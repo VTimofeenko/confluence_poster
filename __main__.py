@@ -59,7 +59,7 @@ def parse_args():
                         help="your confluence password")
     parser.add_argument("--config", default="config.json",
                         help="the file with the config"
-                        "by default - config.json in same folder")
+                        "by default - config.json in the same folder")
     parser.add_argument("--force", help="Force write the page, even if the last\
                         author is different", action='store_true')
     parser.add_argument("--page_title", help="Allows overriding page title from\
