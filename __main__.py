@@ -10,6 +10,7 @@ from atlassian import Confluence
 import argparse
 import json
 import sys
+import pathlib
 
 """Links:
 * https://atlassian-python-api.readthedocs.io/en/latest/
@@ -54,16 +55,20 @@ def create_under_parent(space, confluence_instance):
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", default="config.json",
-                        help="the file with the config")
     parser.add_argument("--password", required=True,
                         help="your confluence password")
+    parser.add_argument("--config", default="config.json",
+                        help="the file with the config"
+                        "by default - config.json in same folder")
     parser.add_argument("--force", help="Force write the page, even if the last\
                         author is different", action='store_true')
-    parser.add_argument("--debug", help="Enable debug logging",
-                        action='store_true')
     parser.add_argument("--page_title", help="Allows overriding page title from\
                         config")
+    parser.add_argument("--upload_files", nargs="+",
+                        help="Filenames to upload as "
+                        "attachments to page_title")
+    parser.add_argument("--debug", help="Enable debug logging",
+                        action='store_true')
     return(parser.parse_args())
 
 
@@ -148,6 +153,16 @@ def main():
         logging.exception(e)
     else:
         logging.info("Update OK")
+    if args.upload_files:
+        logging.info("Uploading the files")
+        for file in args.upload_files:
+            logging.info(f"\tUploading file {file}")
+            uploaded_file_path = pathlib.Path(file)
+            confluence.attach_file(uploaded_file_path,
+                                   name=uploaded_file_path.name,
+                                   content_type=None, page_id=page_id)
+            logging.info(f"\tDone uploading file {file}")
+        logging.info("Done upload")
 
 
 if __name__ == "__main__":
