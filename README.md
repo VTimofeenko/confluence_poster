@@ -50,6 +50,12 @@ This parameter defines some parts of the script's behavior, namely authenticatio
 
 Password works differently for online confluence. Follow [this link](https://confluence.atlassian.com/cloud/api-tokens-938839638.html) and generate a token. Use in place of password.
 
+# Installation
+
+Download and install from [releases page](https://github.com/SabbathHex/confluence_poster/releases).
+
+Alternatively, this package is available from [nitratesky](https://github.com/SabbathHex/nitratesky) overlay.
+
 # Building
 
 Python's [zipapp](https://docs.python.org/3/library/zipapp.html) is used to build the "binary", see `build.sh` contents.
