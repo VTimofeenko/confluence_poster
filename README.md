@@ -22,6 +22,7 @@ Supplementary script for writing confluence wiki articles in vim. Capable of ale
 ## Config
 
 Commented config:
+
 	{
 		"file_to_open": "",			# the name of text file with page contents
 		"auth" : {
