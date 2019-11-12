@@ -51,6 +51,10 @@ This parameter defines some parts of the script's behavior, namely authenticatio
 
 Password works differently for online confluence. Follow [this link](https://confluence.atlassian.com/cloud/api-tokens-938839638.html) and generate a token. Use in place of password.
 
+# Git integration
+
+`contrib` directory has a git hook sample that runs `post_to_confluence` if the page change is commited.
+
 # Installation
 
 Download and install from [releases page](https://github.com/SabbathHex/confluence_poster/releases).

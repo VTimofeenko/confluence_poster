@@ -1,0 +1,23 @@
+#!/usr/bin/python
+from subprocess import check_output, Popen
+print("Post-commit started")
+
+
+changed_files = check_output(['git', 'log',
+                              '-1', '--name-only',
+                              '--oneline']).decode("utf-8").split("\n")[1:-1]
+
+changed_docs = [_ for _ in changed_files if _.endswith('docx')]
+print(changed_files)
+
+base_post_cmd = 'post_to_confluence --password <API_TOKEN>'
+if changed_docs:
+    confluence_post_cmd = base_post_cmd + '--upload_files '
+    + ' '.join(changed_docs)
+elif 'page.confluencewiki' in changed_files:
+    confluence_post_cmd = base_post_cmd
+else:
+    confluence_post_cmd = ''
+
+proc = Popen(confluence_post_cmd.split())
+print("Post-commit ended")
