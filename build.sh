@@ -4,6 +4,7 @@
 [ ! -d "build_area/" ] &&  mkdir build_area
 echo "Cleaning build area"
 rm -rf build_area/*
+[ ! -d "lib/" ] && echo "Looks like this is not virtual environment" && exit 1
 echo "Copying main executable file to build area"
 cp __main__.py build_area/
 echo "Copying libs to build area"
