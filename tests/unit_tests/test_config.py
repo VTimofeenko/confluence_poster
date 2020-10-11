@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'confluence_poster'))
+print(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'confluence_poster'))
 from confluence_poster.poster_config import Config, Page
 from dataclasses import fields
 import toml
@@ -44,6 +48,7 @@ def test_repo_sample_config():
     assert _.auth["is_cloud"] is False
     assert _.pages[0].page_name == "Some page name"
     assert len(_.pages) == 1
+    assert _.author == ""
 
 
 def test_no_auth(tmp_path):
@@ -112,14 +117,6 @@ def test_no_default_space(tmp_path):
     with pytest.raises(ValueError) as e:
         _ = Config(config_file)
     assert "neither is default space" in e.value.args[0]
-
-
-def test_broken_default_definition(tmp_path):
-    """Checks integrity checks of default section"""
-    config_file = mk_tmp_file(tmp_path, filename="default_no_value", key_to_update="pages.default", value_to_update='')
-    with pytest.raises(ValueError) as e:
-        _ = Config(config_file)
-    assert "not a section" in e.value.args[0]
 
 
 def test_default_page_space_not_str(tmp_path):

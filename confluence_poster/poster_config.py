@@ -28,22 +28,20 @@ class Config(object):
         default_space = None
         for item in pages:
             item_content = pages[item]
-            if item == "default":
-                if isinstance(item_content, dict):
+            if isinstance(item_content, dict):
+                if item == "default":
                     default_space = item_content.get("page_space", None)  # None is OK here, checked later
                     if not isinstance(default_space, str) or default_space is None:
                         raise ValueError("default.page_space should be a string")
-                    continue
-                else:
-                    raise ValueError("'Default' is not a section")
-            if isinstance(item_content, dict):
-                # this is a page definition
-                for prop in item_content:
-                    if not isinstance(item_content[prop], str):
-                        raise ValueError(f"{prop} property of a page is not a string")
+                else:  # this is a page definition
+                    for prop in item_content:
+                        if not isinstance(item_content[prop], str):
+                            raise ValueError(f"{prop} property of a page is not a string")
 
-                page = Page(item_content['page_name'], item_content['page_path'], item_content.get('page_space', None))
-                self.__pages.append(page)
+                    page = Page(item_content['page_name'],
+                                item_content['page_path'],
+                                item_content.get('page_space', None))
+                    self.__pages.append(page)
             else:
                 raise ValueError("Pages section is malformed, refer to sample config.toml")
 
