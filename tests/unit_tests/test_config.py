@@ -1,7 +1,3 @@
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'confluence_poster'))
-print(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'confluence_poster'))
 from confluence_poster.poster_config import Config, Page
 from dataclasses import fields
 import toml
@@ -87,7 +83,7 @@ def test_author_not_str(tmp_path):
     """Checks that exception is thrown if author is not a string"""
     config_file = mk_tmp_file(tmp_path, key_to_update="author", value_to_update=1)
 
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(ValueError):
         _ = Config(config_file)
 
 
@@ -147,5 +143,5 @@ def test_page_no_name_or_path(tmp_path):
     """Checks that lack of mandatory string definition is handled with an exception"""
     for page_def in [_.name for _ in fields(Page) if _.name != 'page_space']:
         config_file = mk_tmp_file(tmp_path, key_to_pop=f"pages.page1.{page_def}")
-        with pytest.raises(KeyError) as e:
+        with pytest.raises(KeyError):
             _ = Config(config_file)
