@@ -41,7 +41,6 @@ def test_repo_sample_config():
     """General wellness test. The default config from repo should always work."""
     _ = Config("config.toml")
     # Just some random checks
-    assert _.auth["is_cloud"] is False
     assert _.pages[0].page_name == "Some page name"
     assert len(_.pages) == 1
     assert _.author == ""
@@ -68,7 +67,7 @@ def test_auth_no_password_ok(tmp_path):
     in this case"""
     config_file = mk_tmp_file(tmp_path, key_to_pop=f"auth.password")
     _ = Config(config_file)
-    assert _.auth['password'] is None
+    assert _.auth.password is None
 
 
 def test_no_author(tmp_path):

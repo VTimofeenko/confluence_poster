@@ -1,5 +1,6 @@
 import toml
 from dataclasses import dataclass
+from typing import Union
 
 
 @dataclass
@@ -7,6 +8,14 @@ class Page:
     page_name: str
     page_path: str
     page_space: str
+
+
+@dataclass
+class Auth:
+    url: str
+    username: str
+    password: Union[str, None]
+    is_cloud: bool = False
 
 
 class Config(object):
@@ -63,9 +72,7 @@ class Config(object):
         for mandatory_config in ["confluence_url", "username", "is_cloud"]:
             if mandatory_config not in auth:
                 raise KeyError(f"{mandatory_config} not in auth section")
-        self.__auth = auth
-        if 'password' not in auth:
-            self.__auth.update({"password": None})
+        self.__auth = Auth(auth['confluence_url'], auth['username'], auth.get('password', None), auth['is_cloud'])
 
     @property
     def author(self):
