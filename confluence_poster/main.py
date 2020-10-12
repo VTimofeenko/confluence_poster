@@ -43,8 +43,7 @@ def upload_files(files: List[Path]):
 
 
 @app.callback()
-def main(ctx: typer.Context,
-         config: str = typer.Option(default="config.toml", help="The filename of config.json"),
+def main(config: str = typer.Option(default="config.toml", help="The filename of config.json"),
          page_title: Optional[str] = typer.Option(None, help="Override page title from config."
                                                              " Applicable if there is only one page"),
          password: Optional[str] = typer.Option(None,
@@ -96,5 +95,3 @@ def main(ctx: typer.Context,
         password=_password,
         api_version=api_version
     )
-
-
