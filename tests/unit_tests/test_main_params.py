@@ -70,7 +70,7 @@ def test_one_page_no_title_in_config(tmp_path):
     assert state.config.pages[0].page_name == page_name
 
 
-def test_debug_is_state():
+def test_debug_in_state():
     result = runner.invoke(app, ['--debug', 'validate'])
     assert result.exit_code == 0
     assert state.debug
