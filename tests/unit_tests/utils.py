@@ -1,4 +1,9 @@
 import toml
+import pytest
+from os import environ
+from typer.testing import CliRunner
+from functools import partial
+from typing import Callable, Union, List
 
 
 def mk_tmp_file(tmp_path, filename: str = None,
@@ -32,3 +37,31 @@ def mk_tmp_file(tmp_path, filename: str = None,
                 _.update({key: value_to_update})
     config_file.write_text(toml.dumps(original_config))
     return config_file
+
+
+real_confluence_config = 'local_config.toml'  # The config filename for testing against local instance
+
+
+def clone_local_config(other_config: str = real_confluence_config):
+    return partial(mk_tmp_file, config_to_clone=other_config)
+
+
+def mark_online_only():
+    return pytest.mark.skipif(environ.get("VALIDATE_ONLINE", None) != "yes",
+                              reason="Environment variable is not set to test against an instance of Confluence")
+
+
+def generate_run_cmd(runner: CliRunner, app,
+                     default_args: Union[List, None] = None) -> Callable:
+    """Config may be either string with path to config file or path object itself"""
+    if default_args is None:
+        default_args = []
+
+    def run_with_config(config=real_confluence_config,
+                        other_args: Union[List, None] = None):
+        if not isinstance(config, str):
+            config = str(config)
+        if other_args is None:
+            other_args = []
+        return runner.invoke(app, ["--config", config] + default_args + other_args)
+    return run_with_config
