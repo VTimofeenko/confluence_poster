@@ -47,11 +47,19 @@ def test_no_passwords_anywhere(tmp_path):
 
 
 def test_password_from_cmdline():
-    pass
+    """Tests that password is parsed correctly from command line and is applied"""
+    test_password = "cmdline_password"
+    _ = runner.invoke(app, ['--password', test_password, 'validate'])
+    assert _.exit_code == 0
+    assert state.confluence_instance.password == test_password
 
 
-def test_password_from_environment():
-    pass
+def test_password_from_environment(monkeypatch):
+    env_password = 'my_password_in_environment'
+    monkeypatch.setenv('CONFLUENCE_PASSWORD', env_password)
+    _ = runner.invoke(app, ['validate'])
+    assert _.exit_code == 0
+    assert state.confluence_instance.password == env_password
 
 
 def test_one_page_no_title_in_config(tmp_path):
