@@ -4,7 +4,9 @@ from pathlib import Path
 from logging import basicConfig, DEBUG
 from confluence_poster.poster_config import Config
 from atlassian import Confluence
+from atlassian.errors import ApiError
 from dataclasses import dataclass
+from requests.exceptions import HTTPError, ConnectionError
 
 
 @dataclass
@@ -26,9 +28,26 @@ def post_page():
 
 
 @app.command()
-def validate():
-    """Validates the provided settings"""
-    pass
+def validate(online: Optional[bool] = typer.Option(default=False,
+                                                   help="Test the provided authentication settings on the actual"
+                                                        " instance of confluence")):
+    """Validates the provided settings. If 'online' is true - tries to fetch the space from the config"""
+    if online:
+        typer.echo("Validating settings against the Confluence instance from config")
+        try:
+            space_key = state.config.pages[0].page_space
+            typer.echo(f"Trying to get {space_key}...")
+            space_id = state.confluence_instance.get_space(space_key)
+        except ConnectionError as e:
+            typer.echo(f"Could not connect to {state.config.auth.url}. Make sure it is correct")
+            raise typer.Abort(1)
+        except ApiError as e:
+            typer.echo(f"Got an API error, details: {e.reason}")
+            raise typer.Abort(1)
+        else:
+            typer.echo(f"Got space id #{space_id}.")
+    typer.echo("Validation successful")
+    return
 
 
 @app.command()
