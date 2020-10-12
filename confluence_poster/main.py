@@ -1,6 +1,5 @@
 import typer
 from typing import Optional, List, Union
-from pprint import pprint
 from pathlib import Path
 from logging import basicConfig, DEBUG
 from confluence_poster.poster_config import Config
@@ -55,6 +54,7 @@ def main(config: str = typer.Option(default="config.toml", help="The filename of
     """
     typer.echo("Starting up confluence_poster")
     if debug:
+        from pprint import pprint
         typer.echo("Set options:")
         state.debug = True
         typer.echo(pprint(locals()))
