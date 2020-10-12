@@ -6,7 +6,7 @@ from typing import Union
 @dataclass
 class Page:
     page_name: str
-    page_path: str
+    page_file: str
     page_space: str
 
 
@@ -48,7 +48,7 @@ class Config(object):
                             raise ValueError(f"{prop} property of a page is not a string")
 
                     page = Page(item_content['page_name'],
-                                item_content['page_path'],
+                                item_content['page_file'],
                                 item_content.get('page_space', None))
                     self.__pages.append(page)
             else:
