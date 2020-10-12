@@ -83,6 +83,7 @@ def test_force_in_state():
 
 
 def test_cloud_api(tmp_path):
+    """Checks that the logic to handle what version of Atlassian API is to be used works well"""
     result = runner.invoke(app, ['--force', 'validate'])
     assert result.exit_code == 0
     assert state.confluence_instance.api_version == "latest"
