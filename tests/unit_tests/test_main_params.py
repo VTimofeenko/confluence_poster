@@ -25,7 +25,7 @@ def test_different_config(tmp_path):
     """Tests that if the script reads from a specific config, not the default one"""
     new_name = "different config"
     config_file = mk_tmp_file(tmp_path, key_to_update="pages.page1.page_name", value_to_update=new_name)
-    _ = runner.invoke(app, ['--config', str(config_file), validate])
+    _ = runner.invoke(app, ['--config', str(config_file), 'validate'])
     assert _.exit_code == 0
     assert state.config.pages[0].page_name == new_name
 
