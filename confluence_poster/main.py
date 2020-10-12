@@ -15,7 +15,6 @@ class StateConfig:
     debug: bool = False
     confluence_instance: Union[None, Confluence] = None
     config: Union[None, Config] = None
-    page_title: Union[str, None] = None
 
 
 app = typer.Typer()
@@ -44,7 +43,7 @@ def upload_files(files: List[Path]):
 
 @app.callback()
 def main(config: str = typer.Option(default="config.toml", help="The filename of config.json"),
-         page_title: Optional[str] = typer.Option(None, help="Override page title from config."
+         page_name: Optional[str] = typer.Option(None, help="Override page title from config."
                                                              " Applicable if there is only one page"),
          password: Optional[str] = typer.Option(None,
                                                 help="Supply the password in command line",
@@ -70,11 +69,11 @@ def main(config: str = typer.Option(default="config.toml", help="The filename of
     state.config = confluence_config
 
     # Check that the page_title is not used with more than 1 page in the config
-    if page_title:
+    if page_name:
         if len(confluence_config.pages) > 1:
             typer.echo("Page title specified as a parameter but there are more than 1 page in the config. Aborting.")
             raise typer.Exit(1)
-        state.page_title = page_title
+        state.config.pages[0].page_name = page_name
 
     # Validate password
     try:

@@ -33,7 +33,7 @@ def test_different_config(tmp_path):
 def test_page_title_specified_two_pages(tmp_path):
     config_file = mk_tmp_file(tmp_path, key_to_update="pages.page2", value_to_update={"page_name": "Page2",
                                                                                       "page_file": "page2.txt"})
-    _ = runner.invoke(app, ['--config', str(config_file), '--page-title', 'Default name', 'validate'])
+    _ = runner.invoke(app, ['--config', str(config_file), '--page-name', 'Default name', 'validate'])
     assert _.exit_code == 1
     assert "Page title specified as a parameter" in _.stdout
 
@@ -63,7 +63,11 @@ def test_password_from_environment(monkeypatch):
 
 
 def test_one_page_no_title_in_config(tmp_path):
-    pass
+    """Checks that script runs correctly if no name is specified in config, but one is provided in cmdline"""
+    page_name = "test_page"
+    config_file = mk_tmp_file(tmp_path, key_to_pop="pages.page1.page_name")
+    _ = runner.invoke(app, ['--page-name', page_name, '--config', str(config_file), 'validate'])
+    assert state.config.pages[0].page_name == page_name
 
 
 def test_debug_is_state():
