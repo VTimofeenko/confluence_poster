@@ -6,7 +6,7 @@ from confluence_poster.poster_config import Config
 from atlassian import Confluence
 from atlassian.errors import ApiError
 from dataclasses import dataclass
-from requests.exceptions import HTTPError, ConnectionError
+from requests.exceptions import ConnectionError
 
 
 @dataclass
@@ -62,7 +62,7 @@ def upload_files(files: List[Path]):
 @app.callback()
 def main(config: str = typer.Option(default="config.toml", help="The filename of config.json"),
          page_name: Optional[str] = typer.Option(None, help="Override page title from config."
-                                                             " Applicable if there is only one page"),
+                                                            "Applicable if there is only one page"),
          password: Optional[str] = typer.Option(None,
                                                 help="Supply the password in command line",
                                                 envvar="CONFLUENCE_PASSWORD"),
