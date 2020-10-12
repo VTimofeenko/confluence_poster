@@ -107,8 +107,25 @@ def test_page_definition_not_str(tmp_path):
 
 
 def test_page_no_name_or_path(tmp_path):
-    """Checks that lack of mandatory string definition is handled with an exception"""
-    for page_def in [_.name for _ in fields(Page) if _.name != 'page_space']:
+    """Checks that lack of mandatory Page definition is handled with an exception"""
+    for page_def in [_.name for _ in fields(Page) if _.name not in ['page_space', 'page_name']]:
         config_file = mk_tmp_file(tmp_path, key_to_pop=f"pages.page1.{page_def}")
         with pytest.raises(KeyError):
             _ = Config(config_file)
+
+
+def test_one_page_no_name(tmp_path):
+    """Tests that page's name can be none for one page case"""
+    config_file = mk_tmp_file(tmp_path, key_to_pop=f"pages.page1.page_name")
+    _ = Config(config_file)
+    assert _.pages[0].page_name is None
+
+
+def test_more_pages_no_name(tmp_path):
+    config_file = mk_tmp_file(tmp_path, key_to_pop="pages.page1.page_name",
+                              key_to_update="pages.page2", value_to_update={'page_name': "Page2", "page_file": ''})
+    with pytest.raises(ValueError) as e:
+        _ = Config(config_file)
+    assert "more than 1 page" in e.value.args[0]
+
+

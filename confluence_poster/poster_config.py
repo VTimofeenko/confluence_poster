@@ -7,7 +7,7 @@ from typing import Union
 class Page:
     page_name: str
     page_file: str
-    page_space: str
+    page_space: Union[str, None]
 
 
 @dataclass
@@ -47,14 +47,17 @@ class Config(object):
                         if not isinstance(item_content[prop], str):
                             raise ValueError(f"{prop} property of a page is not a string")
 
-                    page = Page(item_content['page_name'],
+                    page = Page(item_content.get('page_name', None),
                                 item_content['page_file'],
                                 item_content.get('page_space', None))
                     self.__pages.append(page)
             else:
                 raise ValueError("Pages section is malformed, refer to sample config.toml")
 
-        # Check that all pages have a space
+        # Validate pages
+        # Page space may be none, in that case default space must be specified
+        # Page name may be none, but the pages list may contain only one. In that case,
+        # page title is expected in the main script
         for page in self.__pages:
             if page.page_space is None:
                 if default_space is not None:
@@ -62,6 +65,8 @@ class Config(object):
                 else:
                     raise ValueError(f"Page '{page.page_name}' does not have page_space specified,"
                                      f" neither is default space")
+            if page.page_name is None and len(self.__pages) > 1:
+                raise ValueError("There are more than 1 page, and one of the names is not specified")
 
     @property
     def auth(self):
