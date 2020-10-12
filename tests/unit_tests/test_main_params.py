@@ -46,6 +46,14 @@ def test_no_passwords_anywhere(tmp_path):
     assert "Password is not specified" in _.stdout
 
 
+def test_password_from_cmdline():
+    pass
+
+
+def test_password_from_environment():
+    pass
+
+
 def test_one_page_no_title_in_config(tmp_path):
     pass
 
