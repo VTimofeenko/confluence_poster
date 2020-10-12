@@ -1,6 +1,6 @@
 from typer.testing import CliRunner
 from confluence_poster.main import app
-from confluence_poster.main import main
+from confluence_poster.main import main, state
 from utils import mk_tmp_file
 
 
@@ -21,8 +21,52 @@ def test_app_nonexisting_config():
     assert _.exit_code == 2
 
 
+def test_different_config(tmp_path):
+    """Tests that if the script reads from a specific config, not the default one"""
+    new_name = "different config"
+    config_file = mk_tmp_file(tmp_path, key_to_update="pages.page1.page_name", value_to_update=new_name)
+    _ = runner.invoke(app, ['--config', str(config_file), validate])
+    assert _.exit_code == 0
+    assert state.config.pages[0].page_name == new_name
+
+
 def test_page_title_specified_two_pages(tmp_path):
-    config_file = mk_tmp_file(tmp_path, key_to_update="pages.page2", value_to_update={"page_title": "Page2",
-                                                                                      "page_path": "page2.txt"})
+    config_file = mk_tmp_file(tmp_path, key_to_update="pages.page2", value_to_update={"page_name": "Page2",
+                                                                                      "page_file": "page2.txt"})
     _ = runner.invoke(app, ['--config', str(config_file), '--page-title', 'Default name', 'validate'])
     assert _.exit_code == 1
+    assert "Page title specified as a parameter" in _.stdout
+
+
+def test_no_passwords_anywhere(tmp_path):
+    """Checks that if there are no passwords specified anywhere, the validation fails"""
+    config_file = mk_tmp_file(tmp_path, key_to_pop="auth.password")
+    _ = runner.invoke(app, ['--config', str(config_file), 'validate'])
+    assert _.exit_code == 1
+    assert "Password is not specified" in _.stdout
+
+
+def test_one_page_no_title_in_config(tmp_path):
+    pass
+
+
+def test_debug_is_state():
+    result = runner.invoke(app, ['--debug', 'validate'])
+    assert result.exit_code == 0
+    assert state.debug
+
+
+def test_force_in_state():
+    result = runner.invoke(app, ['--force', 'validate'])
+    assert result.exit_code == 0
+    assert state.force
+
+
+def test_cloud_api(tmp_path):
+    result = runner.invoke(app, ['--force', 'validate'])
+    assert result.exit_code == 0
+    assert state.confluence_instance.api_version == "latest"
+    not_cloud_config = mk_tmp_file(tmp_path, key_to_update="auth.is_cloud", value_to_update=True)
+    result = runner.invoke(app, ['--config', str(not_cloud_config), '--force', 'validate'])
+    assert result.exit_code == 0
+    assert state.confluence_instance.api_version == "cloud"
