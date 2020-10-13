@@ -40,18 +40,20 @@ def post_page():
                 else:
                     page_last_updated_by = page_last_updated_by['username']
                 if page_last_updated_by != state.config.author:
-                    typer.echo(f"Flag 'force' is not set and last author of page f{page.page_name}"
+                    typer.echo(f"Flag 'force' is not set and last author of page '{page.page_name}'"
                                f" is {page_last_updated_by}, not {state.config.author}. Skipping page")
                     continue
             with open(page.page_file, 'r') as _:
+                typer.echo(f"Updating page #{page_id}")
                 confluence.update_existing_page(page_id=page_id, title=page.page_name, body=_.read(),
                                                 representation='wiki')
         else:
-            # Page does not exist
+            # Page does not exist. Confluence API reports it itself
             typer.echo("Page not found")
             parent_id = None
             if typer.confirm("Should it be created?", default=True):
-                while typer.confirm(f"Should the script look for a parent in space {page.page_space}?") or parent_id:
+                while typer.confirm(f"Should the script look for a parent in space {page.page_space}?"
+                                    f" (N to be prompted to create the page in the root)") or parent_id:
                     parent_name = typer.prompt("Which page should the script look for?")
                     if parent_page := confluence.get_page_by_title(space=page.page_space, title=parent_name,
                                                                    expand=''):
@@ -65,7 +67,7 @@ def post_page():
 
                 else:
                     # If parent_id stays None, page will be created in the root
-                    if not typer.confirm(f"Create the page in the root of {page.page_space}?"):
+                    if not typer.confirm(f"Create the page in the root of {page.page_space}? N will skip page"):
                         continue
                 with open(page.page_file, 'r') as _:
                     typer.echo("Creating page")
@@ -77,7 +79,8 @@ def post_page():
                     typer.echo(f"Created page #{page_id} in space {page.page_space} called '{page.page_name}'")
                     state.created_pages.append(int(page_id))
             else:
-                typer.echo(f"Not creating page f{page.page_name}")
+                typer.echo(f"Not creating page {page.page_name}")
+    typer.echo("Finished processing pages")
 
 
 @app.command()
