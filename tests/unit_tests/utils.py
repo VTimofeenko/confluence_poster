@@ -4,6 +4,7 @@ from os import environ
 from typer.testing import CliRunner
 from functools import partial
 from typing import Callable, Union, List
+from faker import Faker
 
 
 def mk_tmp_file(tmp_path, filename: str = None,
@@ -71,3 +72,14 @@ def generate_run_cmd(runner: CliRunner, app,
             other_args = []
         return runner.invoke(app, ["--config", config] + pre_args + default_args + other_args, **kwargs)
     return run_with_config
+
+
+def mk_fake_file(tmp_path,
+                 filename: str = None):
+    if filename is None:
+        fake_file = tmp_path / tmp_path.name
+    else:
+        fake_file = tmp_path / filename
+    fake_text = Faker().paragraph(nb_sentences=10)
+    fake_file.write_text(fake_text)
+    return fake_file, fake_text

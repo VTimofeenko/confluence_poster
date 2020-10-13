@@ -2,7 +2,8 @@ from typer.testing import CliRunner
 from typing import Union
 import pytest
 from confluence_poster.main import app, state
-from utils import clone_local_config, mark_online_only, generate_run_cmd, real_confluence_config
+from confluence_poster.poster_config import Config
+from utils import clone_local_config, mark_online_only, generate_run_cmd, real_confluence_config, mk_fake_file
 from atlassian import Confluence, errors
 from functools import wraps
 from faker import Faker
@@ -48,6 +49,10 @@ def run_with_title(page_title: str = None,  fake_title=True, *args, **kwargs,):
     page_title = "Py test: " + page_title
 
     return run_with_config(pre_args=['--page-name', page_title], *args, **kwargs), page_title
+
+
+def get_page_body(page_id):
+    return confluence_instance.get_page_by_id(page_id, expand='body.storage').get('body').get('storage').get('value')
 
 
 def get_page_id_from_stdout(stdout: str) -> Union[int, None]:
@@ -132,21 +137,21 @@ def test_not_create_if_refused():
 @check_created_pages
 @record_state
 @pytest.fixture(scope='function')
-def setup_parent():
+def setup_page():
     """Creates a page that will be the parent"""
-    result, parent_title = run_with_title(input="Y\n"  # create page
-                                                "N\n"  # do not look for parent
-                                                "Y\n"  # do create in root of the space
-                                          )
+    result, page_title = run_with_title(input="Y\n"  # create page
+                                              "N\n"  # do not look for parent
+                                              "Y\n"  # do create in root of the space
+                                        )
     assert result.exit_code == 0
-    return get_page_id_from_stdout(result.stdout), parent_title
+    return get_page_id_from_stdout(result.stdout), page_title
 
 
 @check_created_pages
 @record_state
-def test_post_single_page_with_parent(setup_parent):
+def test_post_single_page_with_parent(setup_page):
     # Create the first page, it will be the parent
-    parent_id, parent_page_name = setup_parent
+    parent_id, parent_page_name = setup_page
     # create the second page, it will be a child
     result, _ = run_with_title(input=f"Y\n"  # create page
                                      f"Y\n"  # look for parent
@@ -167,29 +172,52 @@ def test_post_multiple_pages():
 
 
 @pytest.mark.skip
-def test_post_force_overwrite():
+def test_post_force_overwrite_same_author():
+    """Checks that even if force is specified and the author is the same - the page is overwritten.
+    If not - it would be silly"""
+    pass
+
+
+@pytest.mark.skip
+def test_post_force_overwrite_other_author():
+    """Checks that force flag overwrites page if the author is different"""
     pass
 
 
 @check_created_pages
 @record_state
-def test_create_and_overwrite_page(tmp_path):
+def test_post_no_overwrite_other_author_no_force(tmp_path, setup_page):
+    """Checks the page is not overwritten if the author is different"""
+    overwrite_file, new_text = mk_fake_file(tmp_path, filename='overwrite')
+    page_id, page_title = setup_page
+    original_username = Config(real_confluence_config).author
+    fake_username = Faker().user_name()
+
+    overwrite_config = mk_tmp_file(tmp_path, key_to_update="author", value_to_update=f"Fake: {fake_username}")
+    overwrite_config = mk_tmp_file(tmp_path,
+                                   config_to_clone=str(overwrite_config),
+                                   key_to_update="pages.page1.page_file", value_to_update=str(overwrite_file))
+    overwrite_result = run_with_config(config=overwrite_config, pre_args=['--page-name', page_title])
+    assert overwrite_result.exit_code == 0
+    assert "Flag 'force' is not set and last author" in overwrite_result.stdout
+    assert original_username in overwrite_result.stdout, \
+        "The original username should be mentioned in the script output"
+    assert fake_username in overwrite_result.stdout, "The author_to_check username should be mentioned in the script " \
+                                                     "output"
+
+
+@check_created_pages
+@record_state
+def test_create_and_overwrite_page(tmp_path, setup_page):
     """Creates a page and overwrites it"""
-    overwrite_file = tmp_path / "overwrite.confluencewiki"
-    new_text = Faker().paragraph(nb_sentences=10)
-    overwrite_file.write_text(new_text)
-    result, page_title = run_with_title(input="Y\n"  # do create page
-                                              "N\n"  # do not look for parent
-                                              "Y\n"  # do create in root
-                                        )
-    assert result.exit_code == 0
+    overwrite_file, new_text = mk_fake_file(tmp_path, filename='overwrite')
+    page_id, page_title = setup_page
+
     overwrite_config = mk_tmp_file(tmp_path, key_to_update="pages.page1.page_file", value_to_update=str(overwrite_file))
-    overwrite_result = runner.invoke(app, ['--config', str(overwrite_config), '--page-name', page_title, 'post-page'])
+    overwrite_result = run_with_config(config=overwrite_config, pre_args=['--page-name', page_title])
     assert overwrite_result.exit_code == 0
     assert "Updating page" in overwrite_result.stdout
-    page_id = get_page_id_from_stdout(result.stdout)
-    body = confluence_instance.get_page_by_id(page_id, expand='body.storage').get('body').get('storage').get('value')
-    assert new_text in body
+    assert new_text in get_page_body(page_id)
 
 
 @pytest.mark.skip
