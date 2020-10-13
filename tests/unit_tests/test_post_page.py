@@ -226,6 +226,13 @@ def test_one_author_correct_other_not():
     pass
 
 
+@pytest.mark.skip
+def test_one_author_correct_other_not_force():
+    """In two page scenario, the config.author changed one page, and somebody else changed the other page.
+    The other page needs to be skipped"""
+    pass
+
+
 def teardown_module():
     """Removes the pages that were created during the test"""
     for page_id in created_page_ids:
