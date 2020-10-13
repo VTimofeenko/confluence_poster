@@ -11,7 +11,7 @@ def mk_tmp_file(tmp_path, filename: str = None,
                 key_to_pop: str = None,  # key path in form 'first_key.second_key' to descend into config
                 key_to_update: str = None, value_to_update=None):
     # Helper function to break config file in various ways
-    if [key_to_update, value_to_update].count(None) == 1:
+    if [key_to_update, value_to_update].count(None) == 1:  # TODO: 'not supplied' vs 'supplied None'
         raise ValueError("Only one update-related parameter was supplied")
 
     if filename is None:
@@ -42,7 +42,9 @@ def mk_tmp_file(tmp_path, filename: str = None,
 real_confluence_config = 'local_config.toml'  # The config filename for testing against local instance
 
 
-def clone_local_config(other_config: str = real_confluence_config):
+def clone_local_config(other_config: str = real_confluence_config,
+                       ):
+    """Shorthand to copy the config to be used against local instance of confluence"""
     return partial(mk_tmp_file, config_to_clone=other_config)
 
 
@@ -58,11 +60,14 @@ def generate_run_cmd(runner: CliRunner, app,
         default_args = []
 
     def run_with_config(config=real_confluence_config,
+                        pre_args: Union[List, None] = None,
                         other_args: Union[List, None] = None,
                         **kwargs):
+        if pre_args is None:
+            pre_args = []
         if not isinstance(config, str):
             config = str(config)
         if other_args is None:
             other_args = []
-        return runner.invoke(app, ["--config", config] + default_args + other_args, **kwargs)
+        return runner.invoke(app, ["--config", config] + pre_args + default_args + other_args, **kwargs)
     return run_with_config
