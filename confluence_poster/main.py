@@ -1,5 +1,5 @@
 import typer
-from typing import Optional, List, Union, Any
+from typing import Optional, List, Union
 from pathlib import Path
 from logging import basicConfig, DEBUG
 from confluence_poster.poster_config import Config
@@ -53,7 +53,7 @@ def post_page():
             parent_id = None
             if typer.confirm("Should it be created?", default=True):
                 while typer.confirm(f"Should the script look for a parent in space {page.page_space}?"
-                                    f" (N to be prompted to create the page in the root)") or parent_id:
+                                    f" (N to be prompted to create the page in the root)"):
                     parent_name = typer.prompt("Which page should the script look for?")
                     if parent_page := confluence.get_page_by_title(space=page.page_space, title=parent_name,
                                                                    expand=''):
@@ -63,10 +63,11 @@ def post_page():
                                          f"{parent_link}\n"
                                          f"Proceed to create?"):
                             parent_id = parent_page["id"]
+                            break
 
                 else:
                     # If parent_id stays None, page will be created in the root
-                    if not typer.confirm(f"Create the page in the root of {page.page_space}? N will skip page"):
+                    if not typer.confirm(f"Create the page in the root of {page.page_space}? N will skip the page"):
                         continue
                 with open(page.page_file, 'r') as _:
                     typer.echo("Creating page")
@@ -93,7 +94,7 @@ def validate(online: Optional[bool] = typer.Option(default=False,
             space_key = state.config.pages[0].page_space
             typer.echo(f"Trying to get {space_key}...")
             space_id = state.confluence_instance.get_space(space_key)
-        except ConnectionError as e:
+        except ConnectionError:
             typer.echo(f"Could not connect to {state.config.auth.url}. Make sure it is correct")
             raise typer.Abort(1)
         except ApiError as e:
