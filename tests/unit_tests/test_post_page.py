@@ -144,11 +144,10 @@ def setup_parent():
 
 @check_created_pages
 @record_state
-def test_post_single_page_with_parent(tmp_path, setup_parent):
+def test_post_single_page_with_parent(setup_parent):
     # Create the first page, it will be the parent
     parent_id, parent_page_name = setup_parent
     # create the second page, it will be a child
-    child_page_name = "Child page name"
     result, _ = run_with_title(input=f"Y\n"  # create page
                                      f"Y\n"  # look for parent
                                      f"{parent_page_name}\n"  # title of the parent
