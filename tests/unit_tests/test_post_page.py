@@ -68,7 +68,7 @@ def record_state(f):  # TODO: maybe dynamic teardown is better?
     return wrapper
 
 
-def check_created_pages(f):
+def check_created_pages(f):  # TODO: spams the API with unneeded gets
     """Decorator to check that the pages that were created in the test actually exist"""
     @wraps(f)
     def wrapper(*args, **kwargs):
@@ -129,22 +129,21 @@ def test_not_create_if_refused():
 @pytest.fixture(scope='function')
 def setup_parent():
     """Creates a page that will be the parent"""
-    result, _ = run_with_title(input="Y\n"  # create page
-                                     "N\n"  # do not look for parent
-                                     "Y\n"  # do create in root of the space
-                               )
+    result, parent_title = run_with_title(input="Y\n"  # create page
+                                                "N\n"  # do not look for parent
+                                                "Y\n"  # do create in root of the space
+                                          )
     assert result.exit_code == 0
-    return get_page_id_from_stdout(result.stdout)
+    return get_page_id_from_stdout(result.stdout), parent_title
 
 
 @check_created_pages
 @record_state
 def test_post_single_page_with_parent(tmp_path, setup_parent):
     # Create the first page, it will be the parent
-    parent_page_name = setup_parent
+    parent_id, parent_page_name = setup_parent
     # create the second page, it will be a child
     child_page_name = "Child page name"
-    pass
     result, _ = run_with_title(input=f"Y\n"  # create page
                                      f"Y\n"  # look for parent
                                      f"{parent_page_name}\n"  # title of the parent
@@ -155,6 +154,7 @@ def test_post_single_page_with_parent(tmp_path, setup_parent):
     assert "Found page #" in result.stdout
     assert "URL is:" in result.stdout
     assert "Proceed to create?" in result.stdout
+    assert get_page_id_from_stdout(result.stdout) in state.confluence_instance.get_child_id_list(parent_id)
 
 
 @pytest.mark.skip
@@ -181,7 +181,7 @@ def teardown_module():
             working_confluence_instance.remove_page(page_id=page_id, recursive=True)
         except errors.ApiError as e:
             # Discarding 404-d pages, they were probably already removed
-            if e.reason.startswith("There is no content"):
+            if e.args[0].startswith("There is no content"):
                 pass
             else:
                 raise e
