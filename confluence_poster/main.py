@@ -58,12 +58,11 @@ def post_page():
                     if parent_page := confluence.get_page_by_title(space=page.page_space, title=parent_name,
                                                                    expand=''):
                         # according to Atlassian REST API reference, '_links' is a legitimate way to access links
-                        # noinspection PyProtectedMember
-                        parent_link = confluence.url + parent_page._links.webui
-                        if typer.confirm(f"Found page #{parent_page.id}, called {parent_name}. URL is:\n"
+                        parent_link = confluence.url + parent_page["_links"]["webui"]
+                        if typer.confirm(f"Found page #{parent_page['id']}, called {parent_name}. URL is:\n"
                                          f"{parent_link}\n"
                                          f"Proceed to create?"):
-                            parent_id = parent_page.id
+                            parent_id = parent_page["id"]
 
                 else:
                     # If parent_id stays None, page will be created in the root
