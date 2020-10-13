@@ -55,7 +55,7 @@ def get_page_id_from_stdout(stdout: str) -> Union[int, None]:
     if result := re.findall("Created page #[0-9]+", stdout):
         return result[0].split("#")[1]
     else:
-        return None
+        raise ValueError("Passed stdout does not have seem to have a created page #")
 
 
 # To store created pages for the teardown
