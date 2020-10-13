@@ -78,7 +78,7 @@ def post_page():
                     typer.echo(f"Created page #{page_id} in space {page.page_space} called '{page.page_name}'")
                     state.created_pages.append(int(page_id))
             else:
-                typer.echo(f"Not creating page {page.page_name}")
+                typer.echo(f"Not creating page '{page.page_name}'")
     typer.echo("Finished processing pages")
 
 
