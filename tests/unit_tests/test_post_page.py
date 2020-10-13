@@ -57,7 +57,6 @@ working_confluence_instance: Confluence
 
 def record_state(f):  # TODO: maybe dynamic teardown is better?
     """Decorator to record the created pages in the test's internal list after the test is run"""
-
     @wraps(f)
     def wrapper(*args, **kwargs):
         f(*args, **kwargs)
@@ -71,7 +70,6 @@ def record_state(f):  # TODO: maybe dynamic teardown is better?
 
 def check_created_pages(f):
     """Decorator to check that the pages that were created in the test actually exist"""
-
     @wraps(f)
     def wrapper(*args, **kwargs):
         f(*args, **kwargs)
