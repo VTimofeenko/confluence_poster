@@ -1,9 +1,12 @@
 from typer.testing import CliRunner, Result
+from typing import Union
 import pytest
 from confluence_poster.main import app, state
 from utils import clone_local_config, mark_online_only, generate_run_cmd
 from atlassian import Confluence, errors
 from functools import wraps
+from faker import Faker
+import re
 
 
 """This module requires an instance of confluence running. The tests will be done against it. To skip this module
@@ -16,17 +19,34 @@ mk_tmp_file = clone_local_config()
 run_with_config = generate_run_cmd(runner=runner, app=app, default_args=['post-page'])
 
 
-def run_with_title(page_title: str = None,  fake_title=True, faker=None, *args, **kwargs,):
+def gen_fake_title():
+    """Generates a fake page title. Default fixture behavior is to purge .unique which does not work for my tests"""
+    f = Faker()
+    while True:
+        yield f.sentence(nb_words=3)
+
+
+fake_title_generator = gen_fake_title()
+
+
+def run_with_title(page_title: str = None,  fake_title=True, *args, **kwargs,):
     """Helper function to create pages with specific title. Generates fake title by default"""
-    if faker is None and page_title is None and fake_title:
-        raise ValueError("Asked for a fake title but faker fixture was not provided")
-    elif page_title is None:
-        faker.random.seed()
-        page_title = faker.sentence(nb_words=3)
+    if page_title is None and fake_title:
+        page_title = next(fake_title_generator)
+    else:
+        raise ValueError("Fake title is False and no real title was provided")
 
     page_title = "Py test: " + page_title
 
     return run_with_config(pre_args=['--page-name', page_title], *args, **kwargs), page_title
+
+
+def get_page_id_from_stdout(stdout: str) -> Union[int, None]:
+    """Function to parse stdout and get the created page id"""
+    if result := re.findall("Created page #[0-9]+", stdout):
+        return result[0].split("#")[1]
+    else:
+        return None
 
 
 # To store created pages for the teardown
@@ -64,10 +84,9 @@ def check_created_pages(f):
 
 @check_created_pages
 @record_state
-def test_page_overridden_title(faker):
+def test_page_overridden_title():
     """Tests that the title supplied through command line is applied"""
-    result, page_title = run_with_title(faker=faker,
-                                        input="Y\n"  # do create page
+    result, page_title = run_with_title(input="Y\n"  # do create page
                                               "N\n"  # do not look for parent
                                               "Y\n"  # do create in root
                                         )
@@ -78,10 +97,9 @@ def test_page_overridden_title(faker):
 
 @check_created_pages
 @record_state
-def test_post_single_page_no_parent(faker):
+def test_post_single_page_no_parent():
     """Test with good default config, to check that everything is OK. Creates a sample page in the root of the space"""
-    result, page_title = run_with_title(faker=faker,
-                                        input="Y\n"  # do create page
+    result, page_title = run_with_title(input="Y\n"  # do create page
                                               "N\n"  # do not look for parent
                                               "Y\n"  # do create in root
                                         )
@@ -108,33 +126,32 @@ def test_not_create_if_refused():
         "Page was not supposed to be created"
 
 
-@pytest.fixture
 @check_created_pages
 @record_state
+@pytest.fixture(scope='function')
 def setup_parent():
     """Creates a page that will be the parent"""
-    parent_page_name = "Parent page"
-    result: Result = run_with_config(input="Y\n"  # create page
-                                           "N\n"  # do not look for parent
-                                           "Y\n",  # do create in root of the space
-                                     pre_args=['--page-name', parent_page_name])
+    result, _ = run_with_title(input="Y\n"  # create page
+                                     "N\n"  # do not look for parent
+                                     "Y\n"  # do create in root of the space
+                               )
     assert result.exit_code == 0
-    return working_confluence_instance.get_page_by_id(state.created_pages[0])['title']
+    return get_page_id_from_stdout(result.stdout)
 
 
-@pytest.mark.skip
 @check_created_pages
 @record_state
 def test_post_single_page_with_parent(tmp_path, setup_parent):
     # Create the first page, it will be the parent
-    parent_page_name = setup_parent()
+    parent_page_name = setup_parent
     # create the second page, it will be a child
     child_page_name = "Child page name"
-    result: Result = run_with_config(input=f"Y\n"  # create page
-                                           f"Y\n"  # look for parent
-                                           f"{parent_page_name}\n"  # title of the parent
-                                           f"Y\n"  # yes, proceed to create
-                                     )
+    pass
+    result, _ = run_with_title(input=f"Y\n"  # create page
+                                     f"Y\n"  # look for parent
+                                     f"{parent_page_name}\n"  # title of the parent
+                                     f"Y\n"  # yes, proceed to create
+                               )
     assert result.exit_code == 0
     assert "Which page should the script look for?" in result.stdout
     assert "Found page #" in result.stdout
