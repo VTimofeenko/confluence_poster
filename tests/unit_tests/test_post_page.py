@@ -171,6 +171,54 @@ def test_post_force_overwrite():
     pass
 
 
+@check_created_pages
+@record_state
+def test_create_and_overwrite_page(tmp_path):
+    """Creates a page and overwrites it"""
+    overwrite_file = tmp_path / "overwrite.confluencewiki"
+    new_text = Faker().paragraph(nb_sentences=10)
+    overwrite_file.write_text(new_text)
+    result, page_title = run_with_title(input="Y\n"  # do create page
+                                              "N\n"  # do not look for parent
+                                              "Y\n"  # do create in root
+                                        )
+    assert result.exit_code == 0
+    overwrite_config = mk_tmp_file(tmp_path, key_to_update="pages.page1.page_file", value_to_update=str(overwrite_file))
+    overwrite_result = runner.invoke(app, ['--config', str(overwrite_config), '--page-name', page_title, 'post-page'])
+    assert overwrite_result.exit_code == 0
+    assert "Updating page" in overwrite_result.stdout
+    page_id = get_page_id_from_stdout(result.stdout)
+    body = confluence_instance.get_page_by_id(page_id, expand='body.storage').get('body').get('storage').get('value')
+    assert new_text in body
+
+
+@pytest.mark.skip
+def test_one_page_refuse_other_posted():
+    pass
+
+
+@pytest.mark.skip
+def test_render_ok():
+    """Test that is supposed ot check that the page rendered confluencewiki format successfully"""
+    pass
+
+
+def test_skip_in_space_root():
+    """Tests that page is properly skipped if the user aborted the creation on the space root prompt"""
+    result, page_title = run_with_title(input="Y\n"  # do create page
+                                              "N\n"  # do not look for parent
+                                              "N\n"  # do create in root
+                                        )
+    assert 'Looking for page' in result.stdout
+    assert 'Should it be created?' in result.stdout  # checking the prompt
+    assert 'Should the script look for a parent in space' in result.stdout  # checking the prompt
+    assert 'Create the page in the root' in result.stdout  # checking the prompt
+    assert 'will skip the page' in result.stdout  # checking the prompt
+    assert result.exit_code == 0
+    assert confluence_instance.get_page_by_title(space=state.config.pages[0].page_space,
+                                                 title=page_title) is None, "Page should not had been created"
+
+
 @pytest.mark.skip
 def test_one_author_correct_other_not():
     """In two page scenario, the config.author changed one page, and somebody else changed the other page.
