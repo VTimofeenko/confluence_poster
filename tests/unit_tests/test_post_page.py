@@ -204,6 +204,7 @@ def test_post_no_overwrite_other_author_no_force(tmp_path, setup_page):
         "The original username should be mentioned in the script output"
     assert fake_username in overwrite_result.stdout, "The author_to_check username should be mentioned in the script " \
                                                      "output"
+    assert new_text not in get_page_body(page_id)
 
 
 @check_created_pages
