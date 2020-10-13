@@ -136,8 +136,12 @@ def main(config: str = typer.Option(default="config.toml", help="The filename of
         # Set global debug to true, for other modules
         basicConfig(level=DEBUG,
                     format='%(asctime)s %(levelname)s %(message)s')
+    else:
+        state.debug = False
     if force:
         state.force = True
+    else:
+        state.force = False
 
     typer.echo("Reading config")
     confluence_config = Config(config)

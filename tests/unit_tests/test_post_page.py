@@ -213,6 +213,7 @@ def test_post_no_overwrite_other_author_no_force(tmp_path, setup_page):
                                    key_to_update="author", value_to_update=f"Fake: {fake_username}")
     overwrite_result = run_with_config(config=overwrite_config, pre_args=['--page-name', page_title])
     assert overwrite_result.exit_code == 0
+    assert state.force is not True
     assert "Flag 'force' is not set and last author" in overwrite_result.stdout
     assert original_username in overwrite_result.stdout, \
         "The original username should be mentioned in the script output"
