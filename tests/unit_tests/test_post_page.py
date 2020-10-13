@@ -112,15 +112,14 @@ def test_post_single_page_no_parent():
     assert result.exit_code == 0
 
 
-@pytest.mark.skip
 def test_not_create_if_refused():
     page_title = 'Refused page'
     result = run_with_config(input="N\n",  # it should not be created
-                             pre_args=['--page-title', page_title])
+                             pre_args=['--page-name', page_title])
     assert result.exit_code == 0
     assert 'Not creating page' in result.stdout, "Script did not report that page is not created"
-    assert working_confluence_instance.get_page_by_title(space=state.config.pages[0].page_space,
-                                                         title=page_title) is None, \
+    assert state.confluence_instance.get_page_by_title(space=state.config.pages[0].page_space,
+                                                       title=page_title) is None, \
         "Page was not supposed to be created"
 
 
