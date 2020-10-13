@@ -1,11 +1,11 @@
 import typer
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Any
 from pathlib import Path
 from logging import basicConfig, DEBUG
 from confluence_poster.poster_config import Config
 from atlassian import Confluence
 from atlassian.errors import ApiError
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from requests.exceptions import ConnectionError
 
 
@@ -16,6 +16,7 @@ class StateConfig:
     debug: bool = False
     confluence_instance: Union[None, Confluence] = None
     config: Union[None, Config] = None
+    created_pages: List[int] = field(default_factory=list)
 
 
 app = typer.Typer()
@@ -24,7 +25,59 @@ state = StateConfig()
 
 @app.command()
 def post_page():
-    pass
+    confluence = state.confluence_instance
+    for page in state.config.pages:
+        typer.echo(f"Looking for page '{page.page_name}'")
+        if page_id := confluence.get_page_id(space=page.page_space, title=page.page_name):
+            # Page exists
+            typer.echo(f"Found page id #{page_id}")
+
+            # If --force is supplied - we do not really care about who edited the page last
+            if not state.force:
+                page_last_updated_by = confluence.get_page_by_id(page_id, expand='version')['version']['by']
+                if confluence.api_version == "cloud":
+                    page_last_updated_by = page_last_updated_by['email']
+                else:
+                    page_last_updated_by = page_last_updated_by['username']
+                if page_last_updated_by != state.config.author:
+                    typer.echo(f"Flag 'force' is not set and last author of page f{page.page_name}"
+                               f" is {page_last_updated_by}, not {state.config.author}. Skipping page")
+                    continue
+            with open(page.page_file, 'r') as _:
+                confluence.update_existing_page(page_id=page_id, title=page.page_name, body=_.read(),
+                                                representation='wiki')
+        else:
+            # Page does not exist
+            typer.echo("Page not found")
+            parent_id = None
+            if typer.confirm("Should it be created?", default=True):
+                while typer.confirm(f"Should the script look for a parent in space {page.page_space}?") or parent_id:
+                    parent_name = typer.prompt("Which page should the script look for?")
+                    if parent_page := confluence.get_page_by_title(space=page.page_space, title=parent_name,
+                                                                   expand=''):
+                        # according to Atlassian REST API reference, '_links' is a legitimate way to access links
+                        # noinspection PyProtectedMember
+                        parent_link = confluence.url + parent_page._links.webui
+                        if typer.confirm(f"Found page #{parent_page.id}, called {parent_name}. URL is:\n"
+                                         f"{parent_link}\n"
+                                         f"Proceed to create?"):
+                            parent_id = parent_page.id
+
+                else:
+                    # If parent_id stays None, page will be created in the root
+                    if not typer.confirm(f"Create the page in the root of {page.page_space}?"):
+                        continue
+                with open(page.page_file, 'r') as _:
+                    typer.echo("Creating page")
+
+                    response = confluence.create_page(space=page.page_space, title=page.page_name, body=_.read(),
+                                                      parent_id=parent_id,
+                                                      representation='wiki')
+                    page_id = response['id']
+                    typer.echo(f"Created page #{page_id} in space {page.page_space} called '{page.page_name}'")
+                    state.created_pages.append(int(page_id))
+            else:
+                typer.echo(f"Not creating page f{page.page_name}")
 
 
 @app.command()

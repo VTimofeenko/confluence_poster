@@ -58,10 +58,11 @@ def generate_run_cmd(runner: CliRunner, app,
         default_args = []
 
     def run_with_config(config=real_confluence_config,
-                        other_args: Union[List, None] = None):
+                        other_args: Union[List, None] = None,
+                        **kwargs):
         if not isinstance(config, str):
             config = str(config)
         if other_args is None:
             other_args = []
-        return runner.invoke(app, ["--config", config] + default_args + other_args)
+        return runner.invoke(app, ["--config", config] + default_args + other_args, **kwargs)
     return run_with_config
