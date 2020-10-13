@@ -1,8 +1,8 @@
-from typer.testing import CliRunner, Result
+from typer.testing import CliRunner
 from typing import Union
 import pytest
 from confluence_poster.main import app, state
-from utils import clone_local_config, mark_online_only, generate_run_cmd
+from utils import clone_local_config, mark_online_only, generate_run_cmd, real_confluence_config
 from atlassian import Confluence, errors
 from functools import wraps
 from faker import Faker
@@ -17,6 +17,7 @@ pytestmark = mark_online_only()
 runner = CliRunner()
 mk_tmp_file = clone_local_config()
 run_with_config = generate_run_cmd(runner=runner, app=app, default_args=['post-page'])
+confluence_instance: Confluence
 
 
 def gen_fake_title():
@@ -27,6 +28,14 @@ def gen_fake_title():
 
 
 fake_title_generator = gen_fake_title()
+
+
+def setup_module():
+    global confluence_instance
+    # Run validate once to populate the config
+    result = runner.invoke(app, ['--config', real_confluence_config, 'validate', '--online'])
+    assert result.exit_code == 0
+    confluence_instance = state.confluence_instance
 
 
 def run_with_title(page_title: str = None,  fake_title=True, *args, **kwargs,):
@@ -52,7 +61,6 @@ def get_page_id_from_stdout(stdout: str) -> Union[int, None]:
 # To store created pages for the teardown
 created_page_ids = set()
 # To actually do the teardown
-working_confluence_instance: Confluence
 
 
 def record_state(f):  # TODO: maybe dynamic teardown is better?
@@ -62,8 +70,6 @@ def record_state(f):  # TODO: maybe dynamic teardown is better?
         f(*args, **kwargs)
         global created_page_ids
         created_page_ids.update(state.created_pages)
-        global working_confluence_instance
-        working_confluence_instance = state.confluence_instance
 
     return wrapper
 
@@ -74,7 +80,7 @@ def check_created_pages(f):  # TODO: spams the API with unneeded gets
     def wrapper(*args, **kwargs):
         f(*args, **kwargs)
         for page_id in state.created_pages:
-            assert working_confluence_instance.get_page_by_id(page_id=page_id) is not None, \
+            assert confluence_instance.get_page_by_id(page_id=page_id) is not None, \
                 f"Page #{page_id} was not created properly and cannot be retrieved from the confluence"
 
     return wrapper
@@ -89,7 +95,7 @@ def test_page_overridden_title():
                                               "Y\n"  # do create in root
                                         )
     assert result.exit_code == 0
-    assert state.confluence_instance.get_page_by_id(state.created_pages[0])['title'] == page_title, \
+    assert confluence_instance.get_page_by_id(state.created_pages[0])['title'] == page_title, \
         "Page title was not applied from command line"
 
 
@@ -118,8 +124,8 @@ def test_not_create_if_refused():
                              pre_args=['--page-name', page_title])
     assert result.exit_code == 0
     assert 'Not creating page' in result.stdout, "Script did not report that page is not created"
-    assert state.confluence_instance.get_page_by_title(space=state.config.pages[0].page_space,
-                                                       title=page_title) is None, \
+    assert confluence_instance.get_page_by_title(space=state.config.pages[0].page_space,
+                                                 title=page_title) is None, \
         "Page was not supposed to be created"
 
 
@@ -153,7 +159,7 @@ def test_post_single_page_with_parent(tmp_path, setup_parent):
     assert "Found page #" in result.stdout
     assert "URL is:" in result.stdout
     assert "Proceed to create?" in result.stdout
-    assert get_page_id_from_stdout(result.stdout) in state.confluence_instance.get_child_id_list(parent_id)
+    assert get_page_id_from_stdout(result.stdout) in confluence_instance.get_child_id_list(parent_id)
 
 
 @pytest.mark.skip
@@ -177,7 +183,7 @@ def teardown_module():
     """Removes the pages that were created during the test"""
     for page_id in created_page_ids:
         try:
-            working_confluence_instance.remove_page(page_id=page_id, recursive=True)
+            confluence_instance.remove_page(page_id=page_id, recursive=True)
         except errors.ApiError as e:
             # Discarding 404-d pages, they were probably already removed
             if e.args[0].startswith("There is no content"):
