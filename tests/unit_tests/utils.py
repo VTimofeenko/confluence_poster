@@ -76,10 +76,17 @@ def generate_run_cmd(runner: CliRunner, app,
 
 def mk_fake_file(tmp_path,
                  filename: str = None):
+    """Generates a .confluencewiki file filled with random stuff. Also generates a cloned real confluence config
+    with one page path updated"""
     if filename is None:
         fake_file = tmp_path / tmp_path.name
     else:
         fake_file = tmp_path / filename
     fake_text = Faker().paragraph(nb_sentences=10)
     fake_file.write_text(fake_text)
-    return fake_file, fake_text
+
+    fake_config = mk_tmp_file(tmp_path, filename="fakeconfig.toml",
+                              config_to_clone=real_confluence_config,
+                              key_to_update="pages.page1.page_file", value_to_update=str(fake_file))
+
+    return fake_file, fake_text, fake_config
