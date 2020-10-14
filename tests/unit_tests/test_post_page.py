@@ -180,7 +180,6 @@ def test_post_multiple_pages():
     pass
 
 
-@pytest.mark.skip
 def test_post_force_overwrite_same_author(tmp_path, setup_page):
     """Checks that even if force is specified and the author is the same - the page is overwritten.
     If not - it would be silly"""
@@ -193,10 +192,19 @@ def test_post_force_overwrite_same_author(tmp_path, setup_page):
     check_body_and_title(page_id, body_text=new_text, title_text=page_title)
 
 
-@pytest.mark.skip
-def test_post_force_overwrite_other_author():
+def test_post_force_overwrite_other_author(tmp_path, setup_page):
     """Checks that force flag overwrites page if the author is different"""
-    pass
+    overwrite_file, new_text, overwrite_config = mk_fake_file(tmp_path, filename='overwrite')
+    page_id, page_title = setup_page
+    fake_username = Faker().user_name()
+
+    overwrite_config = mk_tmp_file(tmp_path,
+                                   config_to_clone=str(overwrite_config),
+                                   key_to_update="author", value_to_update=f"Fake: {fake_username}")
+    force_result = run_with_config(config=overwrite_config, pre_args=['--force', '--page-name', page_title])
+    assert "Updating page" in force_result.stdout
+    assert new_text in get_page_body(page_id)
+    check_body_and_title(page_id, body_text=new_text, title_text=page_title)
 
 
 @check_created_pages
