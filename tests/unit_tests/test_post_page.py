@@ -116,7 +116,9 @@ def test_page_overridden_title():
 @check_created_pages
 @record_state
 def test_post_single_page_no_parent():
-    """Test with good default config, to check that everything is OK. Creates a sample page in the root of the space"""
+    """Test with good default config, to check that everything is OK. Creates a sample page in the root of the space
+
+    Author's note: mirrors setup_page fixture, but kept separately to make failures clearer"""
     result, page_title = run_with_title(input="Y\n"  # do create page
                                               "N\n"  # do not look for parent
                                               "Y\n"  # do create in root
