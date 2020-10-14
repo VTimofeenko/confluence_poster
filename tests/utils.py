@@ -1,13 +1,25 @@
 import toml
-import pytest
-from os import environ
 from typer.testing import CliRunner
 from functools import partial
-from typing import Callable, Union, List
+from typing import Callable, Union, List, Set
 from faker import Faker
+from confluence_poster.poster_config import Config
+from atlassian import Confluence
+from pathlib import Path
+import re
 
 
 real_confluence_config = 'local_config.toml'  # The config filename for testing against local instance
+created_pages = set()
+
+if Path(real_confluence_config).exists():
+    real_config = Config(real_confluence_config)
+    confluence_instance = Confluence(url=real_config.auth.url,
+                                     username=real_config.auth.username,
+                                     password=real_config.auth.password)
+else:
+    print(f"Config for testing local confluence: {real_confluence_config} does not exist.")
+    confluence_instance = None
 
 
 def mk_tmp_file(tmp_path, filename: str = None,
@@ -49,12 +61,6 @@ def clone_local_config(other_config: str = real_confluence_config,
     return partial(mk_tmp_file, config_to_clone=other_config)
 
 
-def mark_online_only():
-    """Marks the test 'online-only' - i.e. tests will be run only if the proper environment variable is iset"""
-    return pytest.mark.skipif(environ.get("VALIDATE_ONLINE", None) != "yes",
-                              reason="Environment variable is not set to test against an instance of Confluence")
-
-
 def generate_run_cmd(runner: CliRunner, app,
                      default_args: Union[List, None] = None) -> Callable:
     """Config may be either string with path to config file or path object itself"""
@@ -86,7 +92,7 @@ def mk_fake_file(tmp_path,
     fake_text = Faker().paragraph(nb_sentences=10)
     fake_file.write_text(fake_text)
 
-    fake_config = mk_tmp_file(tmp_path, filename="fakeconfig.toml",
+    fake_config = mk_tmp_file(tmp_path, filename="fake_config.toml",
                               config_to_clone=real_confluence_config,
                               key_to_update="pages.page1.page_file", value_to_update=str(fake_file))
 
@@ -97,10 +103,11 @@ def gen_fake_title():
     """Generates a fake page title. Default fixture behavior is to purge .unique which does not work for my tests"""
     f = Faker()
     while True:
-        yield f.sentence(nb_words=3)
+        yield "pytest: " + f.sentence(nb_words=3)
 
 
 fake_title_generator = gen_fake_title()
+
 
 def generate_fake_content():
     f = Faker()
@@ -120,8 +127,56 @@ def generate_fake_page(tmp_path) -> (str, str, str):
     return title, content, str(filename)
 
 
-def generate_local_config(tmp_path, pages: int = 1) -> str:
-    """Clones the auth and default space from local config, and generates the required amount of pages"""
-    new_config = clone_local_config()(tmp_path, key_to_pop = "pages.page1")
+def generate_local_config(tmp_path, pages: int = 1) -> (str, Config):
+    """Clones the auth and default space from local config, and generates the required amount of pages.
+    Returns path to the new config and instance of it"""
+    new_config = clone_local_config()(tmp_path, key_to_pop="pages.page1")
     for page_number in range(pages):
-        pass
+        title, _, filename = generate_fake_page(tmp_path)
+        new_config = mk_tmp_file(tmp_path, filename=str(new_config),
+                                 config_to_clone=new_config,
+                                 key_to_update=f"pages.page{page_number}",
+                                 value_to_update={
+                                     "page_name": title,
+                                     "page_file": filename
+
+                                 })
+    return new_config, Config(str(new_config))
+
+
+def page_created(page_title: str, space: str = None) -> bool:
+    """Checks that the page has been created by looking it up by title"""
+    if space is None:
+        space = real_config.pages[0].page_space
+    return confluence_instance.get_page_by_title(space=space, title=page_title) is not None
+
+
+def get_pages_ids_from_stdout(stdout: str) -> Union[Set[int], Set]:
+    """Returns list of pages from stdout"""
+    if result := re.findall("Created page #[0-9]+", stdout):
+        return set([_.split("#")[1] for _ in result])
+    else:
+        return set()
+
+
+def get_page_id_from_stdout(stdout: str) -> Union[int, None]:
+    """Function to parse stdout and get the created page id"""
+    if len(result := get_pages_ids_from_stdout(stdout)) == 1:
+        return result.pop()
+    elif len(result) == 0:
+        return None
+    else:
+        raise ValueError("Returned multiple page ids!")
+
+
+def check_body_and_title(page_id: int, body_text: str, title_text: str):
+    assert body_text in get_page_body(page_id)
+    assert title_text in get_page_title(page_id)
+
+
+def get_page_body(page_id):
+    return confluence_instance.get_page_by_id(page_id, expand='body.storage').get('body').get('storage').get('value')
+
+
+def get_page_title(page_id):
+    return confluence_instance.get_page_by_id(page_id, expand='body.storage').get('title')
