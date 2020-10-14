@@ -7,6 +7,9 @@ from typing import Callable, Union, List
 from faker import Faker
 
 
+real_confluence_config = 'local_config.toml'  # The config filename for testing against local instance
+
+
 def mk_tmp_file(tmp_path, filename: str = None,
                 config_to_clone: str = 'config.toml',
                 key_to_pop: str = None,  # key path in form 'first_key.second_key' to descend into config
@@ -40,9 +43,6 @@ def mk_tmp_file(tmp_path, filename: str = None,
     return config_file
 
 
-real_confluence_config = 'local_config.toml'  # The config filename for testing against local instance
-
-
 def clone_local_config(other_config: str = real_confluence_config,
                        ):
     """Shorthand to copy the config to be used against local instance of confluence"""
@@ -50,6 +50,7 @@ def clone_local_config(other_config: str = real_confluence_config,
 
 
 def mark_online_only():
+    """Marks the test 'online-only' - i.e. tests will be run only if the proper environment variable is iset"""
     return pytest.mark.skipif(environ.get("VALIDATE_ONLINE", None) != "yes",
                               reason="Environment variable is not set to test against an instance of Confluence")
 
@@ -90,3 +91,37 @@ def mk_fake_file(tmp_path,
                               key_to_update="pages.page1.page_file", value_to_update=str(fake_file))
 
     return fake_file, fake_text, fake_config
+
+
+def gen_fake_title():
+    """Generates a fake page title. Default fixture behavior is to purge .unique which does not work for my tests"""
+    f = Faker()
+    while True:
+        yield f.sentence(nb_words=3)
+
+
+fake_title_generator = gen_fake_title()
+
+def generate_fake_content():
+    f = Faker()
+    while True:
+        yield f.paragraph(nb_sentences=10)
+
+
+fake_content_generator = generate_fake_content()
+
+
+def generate_fake_page(tmp_path) -> (str, str, str):
+    """Generates a title, fake content and the path to the temporary file in temporary path"""
+    title = next(fake_title_generator)
+    content = next(fake_content_generator)
+    filename = tmp_path / title.lower().replace(' ', '_')
+    filename.write_text(content)
+    return title, content, str(filename)
+
+
+def generate_local_config(tmp_path, pages: int = 1) -> str:
+    """Clones the auth and default space from local config, and generates the required amount of pages"""
+    new_config = clone_local_config()(tmp_path, key_to_pop = "pages.page1")
+    for page_number in range(pages):
+        pass

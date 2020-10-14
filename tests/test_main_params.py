@@ -2,9 +2,11 @@ from typer.testing import CliRunner
 from confluence_poster.main import app
 from confluence_poster.main import main, state
 from utils import mk_tmp_file
+import pytest
 
 
 runner = CliRunner()
+pytestmark = pytest.mark.offline
 
 
 def test_app_no_params_ok():

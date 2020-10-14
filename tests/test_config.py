@@ -4,6 +4,8 @@ from utils import mk_tmp_file
 import toml
 import pytest
 
+pytestmark = pytest.mark.offline
+
 
 def test_repo_sample_config():
     """General wellness test. The default config from repo should always work."""

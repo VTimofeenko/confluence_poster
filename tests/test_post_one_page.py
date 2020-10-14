@@ -3,7 +3,14 @@ from typing import Union
 import pytest
 from confluence_poster.main import app, state
 from confluence_poster.poster_config import Config
-from utils import clone_local_config, mark_online_only, generate_run_cmd, real_confluence_config, mk_fake_file
+from utils import clone_local_config, \
+    generate_run_cmd,\
+    real_confluence_config,\
+    real_config, \
+    mk_fake_file,\
+    generate_local_config,\
+    page_created
+
 from atlassian import Confluence, errors
 from functools import wraps
 from faker import Faker
@@ -13,7 +20,7 @@ import re
 """This module requires an instance of confluence running. The tests will be done against it. To skip this module
 set 'VALIDATE_ONLINE' environment variable to something other than 'yes'."""
 
-pytestmark = mark_online_only()
+pytestmark = pytest.mark.online
 
 runner = CliRunner()
 mk_tmp_file = clone_local_config()
@@ -140,9 +147,7 @@ def test_not_create_if_refused():
                              pre_args=['--page-name', page_title])
     assert result.exit_code == 0
     assert 'Not creating page' in result.stdout, "Script did not report that page is not created"
-    assert confluence_instance.get_page_by_title(space=state.config.pages[0].page_space,
-                                                 title=page_title) is None, \
-        "Page was not supposed to be created"
+    assert not page_created(page_title=page_title), "Page was not supposed to be created"
 
 
 @check_created_pages
@@ -263,9 +268,28 @@ def test_create_and_overwrite_page(tmp_path, setup_page):
     check_body_and_title(page_id, body_text=new_text, title_text=page_title)
 
 
+@record_state
+@pytest.fixture(scope='function')
+def setup_two_page_config(tmp_path) -> (str, Config):
+    return generate_local_config(tmp_path, pages=2)
+
+
 @pytest.mark.skip
-def test_one_page_refuse_other_posted():
-    pass
+@check_created_pages
+@record_state
+def test_one_page_refuse_other_posted(setup_two_page_config):
+    """In two page case, user rejects creating the second page. Need to check that only one was created"""
+    two_page_config_file, two_page_config = setup_two_page_config
+    result = run_with_config(config=two_page_config_file,
+                             input="Y\n"  # create first page
+                                   "N\n"  # do not look for parent
+                                   "Y\n"  # create in root
+                                   "N\n")  # do not create the second page
+    assert result.exit_code == 0
+    assert result.stdout.count("Creating page") == 1
+    assert confluence_instance.get_page_by_title(space=real_config.pages[0].page_space, title=fake_title) is None, \
+        "The second page should not have been created"
+    assert not page_created(page_title=two_page_config.pages[1].page_name)
 
 
 @pytest.mark.skip
