@@ -177,9 +177,27 @@ def test_post_single_page_with_parent(setup_page):
     assert get_page_id_from_stdout(result.stdout) in confluence_instance.get_child_id_list(parent_id)
 
 
-@pytest.mark.skip
-def test_post_multiple_pages():
-    pass
+@check_created_pages
+@record_state
+def test_post_multiple_pages(tmp_path):
+    """Checks that creation of two brand new pages in root of the space works fine"""
+    fake_file, fake_text, _ = mk_fake_file(tmp_path)
+    fake_title = next(fake_title_generator)
+    c = Config(real_confluence_config)
+    two_page_config = mk_tmp_file(tmp_path,
+                                  key_to_update="pages.page2",
+                                  value_to_update={"page_name": fake_title,
+                                                   "page_file": str(fake_file),
+                                                   "page_space": c.pages[0].page_space})
+    result = run_with_config(config=two_page_config,
+                             input="Y\n"  # create first page
+                                   "N\n"  # do not look for parent
+                                   "Y\n"  # create in root
+                                   "Y\n"  # create second page
+                                   "N\n"
+                                   "Y\n")
+    assert result.exit_code == 0
+    assert result.stdout.count("Creating page") == 2
 
 
 def test_post_force_overwrite_same_author(tmp_path, setup_page):

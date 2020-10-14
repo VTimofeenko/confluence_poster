@@ -79,9 +79,9 @@ def mk_fake_file(tmp_path,
     """Generates a .confluencewiki file filled with random stuff. Also generates a cloned real confluence config
     with one page path updated"""
     if filename is None:
-        fake_file = tmp_path / tmp_path.name
+        fake_file = tmp_path / f"{tmp_path.name}.confluencewiki"
     else:
-        fake_file = tmp_path / filename
+        fake_file = tmp_path / f"{filename}.confluencewiki"
     fake_text = Faker().paragraph(nb_sentences=10)
     fake_file.write_text(fake_text)
 
