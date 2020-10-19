@@ -1,12 +1,13 @@
 import toml
-from typer.testing import CliRunner
+from typer.testing import CliRunner, Result
 from functools import partial
 from typing import Callable, Union, List, Set
 from faker import Faker
-from confluence_poster.poster_config import Config
+from confluence_poster.poster_config import Config, Page
 from atlassian import Confluence
 from pathlib import Path
 import re
+from inspect import currentframe
 
 
 real_confluence_config = 'local_config.toml'  # The config filename for testing against local instance
@@ -181,3 +182,26 @@ def get_page_body(page_id):
 
 def get_page_title(page_id):
     return confluence_instance.get_page_by_id(page_id, expand='body.storage').get('title')
+
+
+def run_with_config(config_file, default_run_cmd: Callable, *args, **kwargs) -> Result:
+    """Function that runs the default_run_cmd with supplied config and records the generated pages in the fixture"""
+    result = default_run_cmd(config=config_file, *args, **kwargs)
+    # This allows manipulating the set of the pages to be destroyed at the end
+    frame = currentframe().f_back.f_back
+    record_pages: set = frame.f_locals.get('funcargs')['record_pages']
+    assert type(record_pages) is set, "Looks like record_set manipulation is going to fail"
+    created_pages = get_pages_ids_from_stdout(result.stdout)
+    record_pages |= created_pages
+    config = Config(config_file)
+    for page_id in created_pages:
+        """Make sure that the pages got created with proper content"""
+        page_title = get_page_title(page_id)
+        found_page: Page = next(_ for _ in config.pages if _.page_name == page_title)
+        with open(found_page.page_file, 'r') as page_file:
+            page_text = page_file.read()
+            assert page_text in get_page_body(page_id), f"Page {page_title} has incorrect content"
+
+    return result
+
+

@@ -1,10 +1,10 @@
-from typer.testing import CliRunner, Result
+from typer.testing import CliRunner
 import pytest
 from confluence_poster.main import app
 from confluence_poster.poster_config import Page, Config
-from utils import generate_run_cmd, generate_local_config, page_created, get_pages_ids_from_stdout, get_page_title,\
-    get_page_body, mk_tmp_file, other_user_config, generate_fake_page, confluence_instance
-from inspect import currentframe
+from utils import generate_run_cmd, generate_local_config, page_created, get_pages_ids_from_stdout,\
+    get_page_body, mk_tmp_file, other_user_config, generate_fake_page, confluence_instance, run_with_config
+from functools import partial
 
 
 """This module requires an instance of confluence running. The tests will be done against it.
@@ -14,27 +14,7 @@ Tests scenarios involving two pages. Tests with scenarios require a config with 
 pytestmark = pytest.mark.online
 runner = CliRunner()
 default_run_cmd = generate_run_cmd(runner=runner, app=app, default_args=['post-page'])
-
-
-def run_with_config(config_file, *args, **kwargs) -> Result:
-    """Function that runs the default_run_cmd with supplied config and records the generated pages in the fixture"""
-    result = default_run_cmd(config=config_file, *args, **kwargs)
-    # This allows manipulating the set of the pages to be destroyed at the end
-    frame = currentframe().f_back.f_back
-    record_pages: set = frame.f_locals.get('funcargs')['record_pages']
-    assert type(record_pages) is set, "Looks like record_set manipulation is going to fail"
-    created_pages = get_pages_ids_from_stdout(result.stdout)
-    record_pages |= created_pages
-    config = Config(config_file)
-    for page_id in created_pages:
-        """Make sure that the pages got created with proper content"""
-        page_title = get_page_title(page_id)
-        found_page: Page = next(_ for _ in config.pages if _.page_name == page_title)
-        with open(found_page.page_file, 'r') as page_file:
-            page_text = page_file.read()
-            assert page_text in get_page_body(page_id), f"Page {page_title} has incorrect content"
-
-    return result
+run_with_config = partial(run_with_config, default_run_cmd=default_run_cmd)
 
 
 @pytest.fixture(scope='function')

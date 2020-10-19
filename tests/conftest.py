@@ -21,4 +21,3 @@ def record_pages():
             else:
                 raise e
     # check for any py test pages?
-
