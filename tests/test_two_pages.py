@@ -159,6 +159,27 @@ def test_one_page_parent_of_other(make_two_pages):
     assert all([_ in get_pages_ids_from_stdout(result.stdout) for _ in [child_page_id, parent_page_id]])
 
 
-@pytest.mark.skip
-def test_update_both_pages():
-    raise NotImplemented
+def test_update_both_pages(make_two_pages, tmp_path):
+    """Checks that both pages will be updated if required"""
+    config_file, config = make_two_pages
+    run_with_config(config_file=config_file,
+                    input="Y\n"  # create first page
+                          "N\n"  # do not look for parent
+                          "Y\n"  # create in root
+                          "Y\n"  # create second page
+                          "N\n"
+                          "Y\n")
+    for page_no in range(1):  # TODO: DRY?
+        *_, new_page_file = generate_fake_page(tmp_path)
+        config_file = mk_tmp_file(tmp_path, config_to_clone=config_file,
+                                  key_to_update=f"pages.page{page_no+1}.page_file",
+                                  value_to_update=new_page_file)
+    config = Config(config_file)  # need to reload config
+    result = run_with_config(config_file=config_file)
+    assert result.exit_code == 0
+    assert result.stdout.count("Updating page") == 2
+    for page in config.pages:
+        page_id = confluence_instance.get_page_by_title(space=page.page_space, title=page.page_name)['id']
+        with open(page.page_file, 'r') as f:
+            page_content = f.read()
+            assert page_content in get_page_body(page_id)
