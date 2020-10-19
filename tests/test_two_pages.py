@@ -9,7 +9,7 @@ from inspect import currentframe
 
 """This module requires an instance of confluence running. The tests will be done against it.
  
-Tests scenarios involving two pages"""
+Tests scenarios involving two pages. Tests with scenarios require a config with a different user, 'other_user_config'"""
 
 pytestmark = pytest.mark.online
 runner = CliRunner()
