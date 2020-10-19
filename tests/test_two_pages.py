@@ -138,9 +138,25 @@ def test_one_author_correct_other_not(make_two_pages, tmp_path, force):
             assert page_content not in get_page_body(page_id)
 
 
-@pytest.mark.skip
-def test_one_page_parent_of_other():
-    raise NotImplemented
+def test_one_page_parent_of_other(make_two_pages):
+    """Tests the scenario of two pages, one is the parent of another"""
+    config_file, config = make_two_pages
+    parent_page: Page
+    child_page: Page
+    parent_page, child_page = config.pages[0], config.pages[1]
+    result = run_with_config(config_file=config_file,
+                             input="Y\n"  # create first page
+                                   "N\n"  # do not look for parent
+                                   "Y\n"  # create in root
+                                   "Y\n"  # create second page
+                                   "Y\n"  # look for parent
+                                   f"{parent_page.page_name}\n"  # page name
+                                   "Y\n")
+    assert result.exit_code == 0
+    child_page_id = confluence_instance.get_page_id(space=parent_page.page_space, title=child_page.page_name)
+    parent_page_id = confluence_instance.get_page_id(space=parent_page.page_space, title=parent_page.page_name)
+    assert confluence_instance.get_parent_content_id(child_page_id) == parent_page_id
+    assert all([_ in get_pages_ids_from_stdout(result.stdout) for _ in [child_page_id, parent_page_id]])
 
 
 @pytest.mark.skip
