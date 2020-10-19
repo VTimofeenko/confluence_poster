@@ -72,12 +72,12 @@ def test_one_page_refuse_other_posted(make_two_pages):
     assert page_created(page_title=config.pages[0].page_name)
     assert not page_created(page_title=config.pages[1].page_name), \
         "The second page should not have been created"
-    # record_pages |= get_pages_ids_from_stdout(result.stdout)
 
 
-def test_one_author_correct_other_not(make_two_pages, tmp_path):
+@pytest.mark.parametrize("force", [False, True])
+def test_one_author_correct_other_not(make_two_pages, tmp_path, force):
     """In two page scenario, the config.author changed one page, and somebody else changed the other page.
-    The other page needs to be skipped"""
+    If force flag is set, the pages need to be updated. Else - only one page"""
     config_file, config = make_two_pages
     run_with_config(config_file=config_file,
                     input="Y\n"  # create first page
@@ -105,30 +105,37 @@ def test_one_author_correct_other_not(make_two_pages, tmp_path):
         config_file = mk_tmp_file(tmp_path, config_to_clone=config_file,
                                   key_to_update=f"pages.page{page_no+1}.page_file",
                                   value_to_update=new_page_file)
-    result = run_with_config(config_file=config_file)
-    assert result.exit_code == 0
-    assert result.stdout.count("Updating page") == 1
-    # Check that first page is updated
-    config = Config(config_file)  # need to reload config here
-    page = config.pages[0]
-    page_id = confluence_instance.get_page_by_title(space=page.page_space, title=page.page_name)['id']
-    with open(page.page_file, 'r') as f:
-        page_content = f.read()
-        assert page_content in get_page_body(page_id)
+    config = Config(config_file)  # need to reload config
 
-    # Check that second page is not
-    page = config.pages[1]
-    page_id = confluence_instance.get_page_by_title(space=page.page_space, title=page.page_name)['id']
-    with open(page.page_file, 'r') as f:
-        page_content = f.read()
-        assert page_content not in get_page_body(page_id)
+    if force:
+        result = run_with_config(config_file=config_file,
+                                 pre_args=['--force'])
+        assert result.exit_code == 0
+        assert result.stdout.count("Updating page") == 2
+        # Check that all pages are updated
+        config = Config(config_file)  # need to reload config here
+        for page in config.pages:
+            page_id = confluence_instance.get_page_by_title(space=page.page_space, title=page.page_name)['id']
+            with open(page.page_file, 'r') as f:
+                page_content = f.read()
+                assert page_content in get_page_body(page_id)
+    else:
+        result = run_with_config(config_file=config_file)
+        assert result.exit_code == 0
+        assert result.stdout.count("Updating page") == 1
+        # Check that first page is updated
+        page = config.pages[0]
+        page_id = confluence_instance.get_page_by_title(space=page.page_space, title=page.page_name)['id']
+        with open(page.page_file, 'r') as f:
+            page_content = f.read()
+            assert page_content in get_page_body(page_id)
 
-
-@pytest.mark.skip
-def test_one_author_correct_other_not_force():
-    """In two page scenario, the config.author changed one page, and somebody else changed the other page.
-    The other page needs to be updated if flag --force is passed"""
-    raise NotImplemented
+        # Check that second page is not
+        page = config.pages[1]
+        page_id = confluence_instance.get_page_by_title(space=page.page_space, title=page.page_name)['id']
+        with open(page.page_file, 'r') as f:
+            page_content = f.read()
+            assert page_content not in get_page_body(page_id)
 
 
 @pytest.mark.skip
