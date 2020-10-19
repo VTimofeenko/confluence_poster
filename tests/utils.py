@@ -10,6 +10,7 @@ import re
 
 
 real_confluence_config = 'local_config.toml'  # The config filename for testing against local instance
+other_user_config = 'local_config_other_user.toml'  # Config with a different user
 created_pages = set()
 
 if Path(real_confluence_config).exists():
@@ -135,7 +136,7 @@ def generate_local_config(tmp_path, pages: int = 1) -> (str, Config):
         title, _, filename = generate_fake_page(tmp_path)
         new_config = mk_tmp_file(tmp_path, filename=str(new_config),
                                  config_to_clone=new_config,
-                                 key_to_update=f"pages.page{page_number}",
+                                 key_to_update=f"pages.page{page_number+1}",
                                  value_to_update={
                                      "page_name": title,
                                      "page_file": filename
