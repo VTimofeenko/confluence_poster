@@ -70,6 +70,16 @@ def test_default_space(tmp_path):
     assert _.pages[1].page_space == "some_space"
 
 
+def test_default_space_multiple_pages_default(tmp_path):
+    """Checks that the default space is applied if there are two pages with no space specified - default is applied"""
+    config_file = mk_tmp_file(tmp_path, key_to_pop="pages.page1.page_space",
+                              key_to_update="pages.page2", value_to_update={'page_name': 'Page2',
+                                                                            'page_file': ''})
+    _ = Config(config_file)
+    for page in _.pages:
+        assert page.page_space == "default space"
+
+
 def test_no_default_space(tmp_path):
     """Tests that if there is no space definition in the default node, and there is no space in page definition,
     there will be an exception"""
@@ -131,3 +141,28 @@ def test_more_pages_no_name(tmp_path):
     assert "more than 1 page" in e.value.args[0]
 
 
+def test_two_pages_same_name_same_space(tmp_path):
+    """Tests that the config properly alerts if there are more than 1 page with the same name and space"""
+    config_file = mk_tmp_file(tmp_path)
+    config = Config(config_file)
+    config_file = mk_tmp_file(tmp_path, config_to_clone=config_file,
+                              key_to_update="pages.page2", value_to_update={'page_name': config.pages[0].page_name,
+                                                                            "page_file": '',
+                                                                            'page_space': config.pages[0].page_space})
+    with pytest.raises(ValueError) as e:
+        _ = Config(config_file)
+    assert "more than 1 page called" in e.value.args[0]
+
+
+def test_two_pages_same_name_different_space(tmp_path):
+    """Tests that the config does not alert if there are more than 1 page with the same name and space"""
+    config_file = mk_tmp_file(tmp_path)
+    config = Config(config_file)
+    config_file = mk_tmp_file(tmp_path, config_to_clone=config_file,
+                              key_to_update="pages.page2", value_to_update={'page_name': config.pages[0].page_name,
+                                                                            "page_file": '',
+                                                                            'page_space': ''})
+    _ = Config(config_file)
+    assert len(_.pages) == 2
+    for page in _.pages:
+        assert page.page_name == config.pages[0].page_name
