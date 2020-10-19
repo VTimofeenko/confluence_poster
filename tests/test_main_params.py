@@ -93,3 +93,9 @@ def test_cloud_api(tmp_path):
     result = runner.invoke(app, ['--config', str(not_cloud_config), '--force', 'validate'])
     assert result.exit_code == 0
     assert state.confluence_instance.api_version == "cloud"
+
+
+@pytest.mark.skip
+def test_two_pages_same_name():
+    """Makes sure that the script complains if there are two pages with the same name"""
+    raise NotImplemented

@@ -69,10 +69,10 @@ def generate_run_cmd(runner: CliRunner, app,
     if default_args is None:
         default_args = []
 
-    def run_with_config(config=real_confluence_config,
-                        pre_args: Union[List, None] = None,
-                        other_args: Union[List, None] = None,
-                        **kwargs):
+    def _run_with_config(config=real_confluence_config,
+                         pre_args: Union[List, None] = None,
+                         other_args: Union[List, None] = None,
+                         **kwargs):
         if pre_args is None:
             pre_args = []
         if not isinstance(config, str):
@@ -80,7 +80,7 @@ def generate_run_cmd(runner: CliRunner, app,
         if other_args is None:
             other_args = []
         return runner.invoke(app, ["--config", config] + pre_args + default_args + other_args, **kwargs)
-    return run_with_config
+    return _run_with_config
 
 
 def mk_fake_file(tmp_path,
@@ -184,24 +184,40 @@ def get_page_title(page_id):
     return confluence_instance.get_page_by_id(page_id, expand='body.storage').get('title')
 
 
-def run_with_config(config_file, default_run_cmd: Callable, *args, **kwargs) -> Result:
+def run_with_config(config_file, default_run_cmd: Callable, record_pages: set = None,
+                    *args, **kwargs) -> Result:
     """Function that runs the default_run_cmd with supplied config and records the generated pages in the fixture"""
     result = default_run_cmd(config=config_file, *args, **kwargs)
     # This allows manipulating the set of the pages to be destroyed at the end
-    frame = currentframe().f_back.f_back
-    record_pages: set = frame.f_locals.get('funcargs')['record_pages']
-    assert type(record_pages) is set, "Looks like record_set manipulation is going to fail"
-    created_pages = get_pages_ids_from_stdout(result.stdout)
-    record_pages |= created_pages
+    _created_pages = get_pages_ids_from_stdout(result.stdout)
+    if _created_pages:
+        frame = currentframe()
+        while True:
+            # go back the stack
+            frame = frame.f_back
+            if frame is None:
+                _record_pages = record_pages  # for cases when this is called from fixture
+                break
+            if (_record_pages := frame.f_locals.get('funcargs', {}).get('record_pages')) is not None:
+                # if global fixture is found
+                break
+
+        assert type(_record_pages) is set, "Looks like record_set manipulation is going to fail"
+        _record_pages |= _created_pages
     config = Config(config_file)
-    for page_id in created_pages:
+    for page_id in _created_pages:
         """Make sure that the pages got created with proper content"""
-        page_title = get_page_title(page_id)
-        found_page: Page = next(_ for _ in config.pages if _.page_name == page_title)
+        if 'pre_args' in kwargs and '--page-name' in kwargs.get("pre_args"):
+            # Page title specified manually, only one page in config
+            found_page = config.pages[0]
+            _ = kwargs.get("pre_args").index('--page-name')
+            page_title = kwargs.get("pre_args")[_ + 1]
+        else:
+            page_title = get_page_title(page_id)
+            found_page: Page = next(_ for _ in config.pages if _.page_name == page_title)
+
         with open(found_page.page_file, 'r') as page_file:
             page_text = page_file.read()
             assert page_text in get_page_body(page_id), f"Page {page_title} has incorrect content"
 
     return result
-
-
