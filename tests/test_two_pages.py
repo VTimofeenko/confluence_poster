@@ -3,7 +3,7 @@ import pytest
 from confluence_poster.main import app
 from confluence_poster.poster_config import Page, Config
 from utils import generate_run_cmd, generate_local_config, page_created, get_pages_ids_from_stdout, get_page_title,\
-    get_page_body
+    get_page_body, mk_tmp_file, other_user_config, generate_fake_page, confluence_instance
 from inspect import currentframe
 
 
@@ -75,17 +75,59 @@ def test_one_page_refuse_other_posted(make_two_pages):
     # record_pages |= get_pages_ids_from_stdout(result.stdout)
 
 
-@pytest.mark.skip
-def test_one_author_correct_other_not():
+def test_one_author_correct_other_not(make_two_pages, tmp_path):
     """In two page scenario, the config.author changed one page, and somebody else changed the other page.
     The other page needs to be skipped"""
-    raise NotImplemented
+    config_file, config = make_two_pages
+    run_with_config(config_file=config_file,
+                    input="Y\n"  # create first page
+                          "N\n"  # do not look for parent
+                          "Y\n"  # create in root
+                          "Y\n"  # create second page
+                          "N\n"
+                          "Y\n")
+    # Update one of the pages with a new author. Requires a separate config for a different user
+    page = config.pages[1]
+    *_, new_page_file = generate_fake_page(tmp_path)
+    other_author_config_file = mk_tmp_file(tmp_path, filename="other_author.toml",
+                                           config_to_clone=other_user_config,
+                                           key_to_update="pages.page1", value_to_update={
+                                                                                            'page_name': page.page_name,
+                                                                                            'page_file': new_page_file,
+                                                                                        })
+    result = run_with_config(config_file=other_author_config_file,
+                             pre_args=['--force'])
+    assert result.exit_code == 0
+
+    # Now the original user edits the two original pages
+    for page_no in range(1):
+        *_, new_page_file = generate_fake_page(tmp_path)
+        config_file = mk_tmp_file(tmp_path, config_to_clone=config_file,
+                                  key_to_update=f"pages.page{page_no+1}.page_file",
+                                  value_to_update=new_page_file)
+    result = run_with_config(config_file=config_file)
+    assert result.exit_code == 0
+    assert result.stdout.count("Updating page") == 1
+    # Check that first page is updated
+    config = Config(config_file)  # need to reload config here
+    page = config.pages[0]
+    page_id = confluence_instance.get_page_by_title(space=page.page_space, title=page.page_name)['id']
+    with open(page.page_file, 'r') as f:
+        page_content = f.read()
+        assert page_content in get_page_body(page_id)
+
+    # Check that second page is not
+    page = config.pages[1]
+    page_id = confluence_instance.get_page_by_title(space=page.page_space, title=page.page_name)['id']
+    with open(page.page_file, 'r') as f:
+        page_content = f.read()
+        assert page_content not in get_page_body(page_id)
 
 
 @pytest.mark.skip
 def test_one_author_correct_other_not_force():
     """In two page scenario, the config.author changed one page, and somebody else changed the other page.
-    The other page needs to be updated"""
+    The other page needs to be updated if flag --force is passed"""
     raise NotImplemented
 
 
