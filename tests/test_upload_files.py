@@ -63,7 +63,7 @@ def test_upload_files_single_page_does_not_exist(tmp_path, gen_attachments):
 
 def test_upload_files_single_page_name_supplied(setup_page, gen_attachments):
     """Runs
-    post --config <config> --page-name somepagename upload-files file1 file2...
+    post --config <config> --page-name <some page name> upload-files file1 file2...
     And makes sure the files were attached to the proper page
     """
     page_id, config_file = setup_page
