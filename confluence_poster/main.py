@@ -36,7 +36,7 @@ def post_page():
             if not state.force:
                 page_last_updated_by = confluence.get_page_by_id(page_id, expand='version')['version']['by']
                 if confluence.api_version == "cloud":
-                    page_last_updated_by = page_last_updated_by['email']
+                    page_last_updated_by = page_last_updated_by['email']  # pragma: no cover
                 else:
                     page_last_updated_by = page_last_updated_by['username']
                 if page_last_updated_by != state.config.author:
@@ -108,11 +108,30 @@ def validate(online: Optional[bool] = typer.Option(default=False,
 
 @app.command()
 def upload_files(files: List[Path]):
-    typer.echo("Uploading the files")
-    for path in files:
-        if path.is_file():
-            typer.echo(f"Uploading file {path.name}")
-    typer.echo("Done uploading files")
+    target_page = state.config.pages[0]
+    if len(state.config.pages) > 1:
+        typer.echo('Upload files are provided, but there are more than 1 pages in the config.')
+        if typer.confirm(f"Continue by attaching all files to the first page, '{target_page.page_name}'?",
+                         default=False):
+            pass
+        else:
+            typer.echo("Aborting.")
+            raise typer.Exit(1)
+
+    if page_id := state.confluence_instance.get_page_id(space=target_page.page_space,
+                                                        title=target_page.page_name):
+        typer.echo("Uploading the files")
+        for path in files:
+            if path.is_file():
+                typer.echo(f"\tUploading file {path.name}")
+                state.confluence_instance.attach_file(str(path),
+                                                      name=path.name,
+                                                      page_id=page_id)
+                typer.echo(f"\tSubmitted file {path.name}")
+        typer.echo("Done uploading files")
+    else:
+        typer.echo(f"Could not find page '{target_page.page_name}'. Aborting")
+        raise typer.Exit(1)
 
 
 @app.callback()
@@ -125,7 +144,7 @@ def main(config: str = typer.Option(default="config.toml", help="The filename of
          force: Optional[bool] = typer.Option(default=False, help="Force overwrite the pages"),
          debug: Optional[bool] = typer.Option(default=False, help="Enable debug logging")):
     """ Supplementary script for writing confluence wiki articles in
-    vim. Uses information from config.json to post the article content to confluence.
+    vim. Uses information from config.toml to post the article content to confluence.
     """
     typer.echo("Starting up confluence_poster")
     if debug:
