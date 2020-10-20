@@ -17,7 +17,7 @@ run_with_config = generate_run_cmd(runner=runner, app=app, default_args=['valida
 
 def test_all_ok():
     """Validates that the validate --online does not break during execution"""
-    result = run_with_config()
+    result: Result = run_with_config()
     assert "Validating settings" in result.stdout
     assert "Trying to get" in result.stdout
     assert "Validation successful" in result.stdout
@@ -27,7 +27,7 @@ def test_all_ok():
 def test_could_not_connect(tmp_path):
     """Checks that validation fails against a non-existent instance of Confluence"""
     config = mk_local_config(tmp_path, key_to_update="auth.confluence_url", value_to_update="http://localhost:64000")
-    result = run_with_config(config=config)
+    result: Result = run_with_config(config=config)
     assert result.exit_code == 1
     assert "Could not connect" in result.stdout
 
@@ -35,6 +35,6 @@ def test_could_not_connect(tmp_path):
 def test_nonexistent_space(tmp_path):
     """Checks that the API returns the error about nonexistent space"""
     config = mk_local_config(tmp_path, key_to_update="pages.page1.page_space", value_to_update="nonexistent_space_key")
-    result = run_with_config(config=config)
+    result: Result = run_with_config(config=config)
     assert result.exit_code == 1
     assert "API error" in result.stdout
