@@ -1,0 +1,2 @@
+[run]
+omit = confluence_poster/__main__.py
