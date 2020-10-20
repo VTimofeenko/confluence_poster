@@ -17,7 +17,7 @@ def test_app_no_params_ok():
     assert main.__doc__.split('\n')[0] in result.stdout
 
 
-def test_app_nonexisting_config():
+def test_app_nonexistent_file():
     """Tries running command with a nonexistent config file specified"""
     _ = runner.invoke(app, ['--config', 'nonexistent_file'])
     assert _.exit_code == 2
