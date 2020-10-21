@@ -4,7 +4,6 @@ setup(
     name='confluence_poster',
     version='1.0',
     packages=['confluence_poster'],
-    package_dir={'': 'tests'},
     url='https://github.com/SabbathHex/confluence_poster',
     license='MIT',
     author='SabbathHex',
