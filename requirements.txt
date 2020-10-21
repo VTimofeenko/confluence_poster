@@ -1,0 +1,5 @@
+toml~=0.10.1
+pytest~=6.1.1
+typer~=0.3.2
+requests~=2.24.0
+Faker~=4.14.0
