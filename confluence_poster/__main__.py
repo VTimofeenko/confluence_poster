@@ -1,2 +1,2 @@
-from .main import app
+from confluence_poster.main import app
 app()
