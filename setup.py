@@ -9,7 +9,7 @@ setup(
     author='SabbathHex',
     author_email='',
     include_package_data=True,
-    entry_points={"console_scripts": ["confluence_poster = confluence_poster.main.app"]},
+    entry_points={"console_scripts": ["confluence_poster = confluence_poster.main:app"]},
     install_requires=[
         "atlassian-python-api>=1.17.6",
         "typer>=0.3.2",
