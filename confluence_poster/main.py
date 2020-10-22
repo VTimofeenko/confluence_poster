@@ -25,6 +25,7 @@ state = StateConfig()
 
 @app.command()
 def post_page():
+    """Posts the content of the pages specified in the config file"""
     confluence = state.confluence_instance
     for page in state.config.pages:
         typer.echo(f"Looking for page '{page.page_name}'")
@@ -108,6 +109,7 @@ def validate(online: Optional[bool] = typer.Option(default=False,
 
 @app.command()
 def upload_files(files: List[Path]):
+    """Uploads the files specified in the command line"""
     target_page = state.config.pages[0]
     if len(state.config.pages) > 1:
         typer.echo('Upload files are provided, but there are more than 1 pages in the config.')
