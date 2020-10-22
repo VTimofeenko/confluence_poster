@@ -1,0 +1,13 @@
+{% set section = typer_help_chapters['Description'] %}
+{{ section['intro'] }}
+
+{{ section['usage'] }}
+
+{{ section['options']|replace("Options", "General Options", 1) }}
+
+These options can be specified for any `COMMAND`.
+
+{{ section['commands'] }}
+
+{{ typer_help_chapters['`confluence_poster post-page`']['intro'] }}
+{{ typer_help_chapters['`confluence_poster post-page`']['usage'] }}

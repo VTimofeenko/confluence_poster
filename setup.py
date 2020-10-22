@@ -22,6 +22,12 @@ setup(
         "pytest-cov",
         "faker"
     ],
+    extras_require={
+        "docs": [
+            'jinja2',
+            'typer-cli'
+        ]
+    },
     description='Script that updates Confluence articles from files written locally',
     classifiers=[
         "Development Status :: 4 - Beta",
