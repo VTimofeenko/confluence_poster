@@ -94,7 +94,7 @@ def validate(online: Optional[bool] = typer.Option(default=False,
         try:
             space_key = state.config.pages[0].page_space
             typer.echo(f"Trying to get {space_key}...")
-            space_id = state.confluence_instance.get_space(space_key)
+            space_id = state.confluence_instance.get_space(space_key).get('id')
         except ConnectionError:
             typer.echo(f"Could not connect to {state.config.auth.url}. Make sure it is correct")
             raise typer.Abort(1)
