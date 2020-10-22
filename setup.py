@@ -13,19 +13,21 @@ setup(
     install_requires=[
         "atlassian-python-api>=1.17.6",
         "typer>=0.3.2",
-        "toml"
+        "toml",
+        "requests"
     ],
     long_description=open("README.md").read(),
     tests_require=[
         "pytest",
         "pytest-cov",
-        "Faker"
+        "faker"
     ],
     description='Script that updates Confluence articles from files written locally',
     classifiers=[
         "Development Status :: 4 - Beta",
         "Environment :: Console",
         "Topic :: Utilities",
+        "Programming Language :: Python :: 3.8",
         "License :: OSI Approved :: MIT License"
     ]
 )
