@@ -1,0 +1,23 @@
+# if the page was not updated by the username specified here, throw an error
+author = ""
+
+[pages]
+[pages.default]
+# Space should be defined as abbreviation, otherwise 403 error would be generated
+page_space = "default space"
+[pages.page1]
+page_name = "Some page name"
+# The name of text file with page contents
+page_file = "some_file.confluencewiki"
+# If specified - overrides the default page_space
+page_space = "some_space"
+
+[auth]
+# URL of confluence instance
+confluence_url = ""
+# Username for authentication
+username = ""
+# Password may also be supplied through --password option or from an environment variable
+password = ""
+is_cloud = false
+
