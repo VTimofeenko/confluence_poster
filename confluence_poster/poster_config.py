@@ -27,7 +27,7 @@ class Config(object):
 
         self.pages = _["pages"]
         self.auth = _["auth"]
-        self.author = _["author"]
+        self.author = _.get("author", None)
 
     @property
     def pages(self):
@@ -98,7 +98,10 @@ class Config(object):
         return self.__author
 
     @author.setter
-    def author(self, author: str):
+    def author(self, author: Union[str, None]):
+        if author is None:
+            author = self.auth.username
         if not isinstance(author, str):
             raise ValueError("Author is not a string")
+
         self.__author = author

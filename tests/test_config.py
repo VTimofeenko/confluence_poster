@@ -40,12 +40,12 @@ def test_auth_no_password_ok(tmp_path):
     assert _.auth.password is None
 
 
-def test_no_author(tmp_path):
-    """Checks that no author string will raise a key error"""
+def test_no_author_use_from_auth(tmp_path):
+    """In case author was not specified at all - use authentication username for checking who last updated pages"""
     config_file = mk_tmp_file(tmp_path, key_to_pop=f"author")
 
-    with pytest.raises(KeyError):
-        _ = Config(config_file)
+    _ = Config(config_file)
+    assert _.author == _.auth.username
 
 
 def test_author_not_str(tmp_path):
