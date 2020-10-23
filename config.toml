@@ -6,14 +6,14 @@ author = ""
 # Space should be defined as abbreviation, otherwise 403 error would be generated
 page_space = "default space"
 [pages.page1]
-page_name = "Some page name"
+page_title = "Some page name"
 # The name of text file with page contents
 page_file = "some_file.confluencewiki"
 # If specified - overrides the default page_space
 page_space = "some_space"
 
 [pages.page2]
-page_name = "Some other page name"
+page_title = "Some other page name"
 page_file = "some_other_file.confluencewiki"
 
 [auth]

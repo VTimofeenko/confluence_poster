@@ -56,15 +56,15 @@ def test_upload_files_single_page_does_not_exist(tmp_path, gen_attachments):
     """Tries to upload files to a non-existent page. Checks that it will fail"""
     file_to_upload, filename = gen_attachments[0]
     config_file, config = generate_local_config(tmp_path=tmp_path)
-    assert not page_created(config.pages[0].page_name), "Page was created when it should not had been"
+    assert not page_created(config.pages[0].page_title), "Page was created when it should not had been"
     result: Result = upload_files(config_file=config_file, other_args=[file_to_upload])
     assert result.exit_code == 1
     assert "Could not find page" in result.stdout
 
 
-def test_upload_files_single_page_name_supplied(setup_page, gen_attachments):
+def test_upload_files_single_page_title_supplied(setup_page, gen_attachments):
     """Runs
-    post --config <config> --page-name <some page name> upload-files file1 file2...
+    post --config <config> --page-title <some page name> upload-files file1 file2...
     And makes sure the files were attached to the proper page
     """
     page_id, config_file = setup_page
@@ -72,12 +72,12 @@ def test_upload_files_single_page_name_supplied(setup_page, gen_attachments):
 
     new_title = next(fake_title_generator)
     # Create the page first
-    create_page = run_with_config(config_file=config_file, pre_args=['--page-name', new_title],
+    create_page = run_with_config(config_file=config_file, pre_args=['--page-title', new_title],
                                   default_run_cmd=generate_run_cmd(runner, app, default_args=['post-page']),
                                   input="Y\nN\nY\n")
     created_page_id = get_page_id_from_stdout(create_page.stdout)
     result: Result = upload_files(config_file=config_file, other_args=[file_to_upload],
-                                  pre_args=['--page-name', new_title])
+                                  pre_args=['--page-title', new_title])
 
     assert result.exit_code == 0
     assert len(confluence_instance.get_attachments_from_content(created_page_id)['results']) == 1

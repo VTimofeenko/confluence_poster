@@ -26,16 +26,16 @@ def test_app_nonexistent_file():
 def test_different_config(tmp_path):
     """Tests that if the script reads from a specific config, not the default one"""
     new_name = "different config"
-    config_file = mk_tmp_file(tmp_path, key_to_update="pages.page1.page_name", value_to_update=new_name)
+    config_file = mk_tmp_file(tmp_path, key_to_update="pages.page1.page_title", value_to_update=new_name)
     _ = runner.invoke(app, ['--config', str(config_file), 'validate'])
     assert _.exit_code == 0
-    assert state.config.pages[0].page_name == new_name
+    assert state.config.pages[0].page_title == new_name
 
 
 def test_page_title_specified_two_pages(tmp_path):
-    config_file = mk_tmp_file(tmp_path, key_to_update="pages.page2", value_to_update={"page_name": "Page2",
+    config_file = mk_tmp_file(tmp_path, key_to_update="pages.page2", value_to_update={"page_title": "Page2",
                                                                                       "page_file": "page2.txt"})
-    _ = runner.invoke(app, ['--config', str(config_file), '--page-name', 'Default name', 'validate'])
+    _ = runner.invoke(app, ['--config', str(config_file), '--page-title', 'Default name', 'validate'])
     assert _.exit_code == 1
     assert "Page title specified as a parameter" in _.stdout
 
@@ -66,11 +66,11 @@ def test_password_from_environment(monkeypatch):
 
 def test_one_page_no_title_in_config(tmp_path):
     """Checks that script runs correctly if no name is specified in config, but one is provided in cmdline"""
-    page_name = "test_page"
-    config_file = mk_tmp_file(tmp_path, key_to_pop="pages.page1.page_name")
+    page_title = "test_page"
+    config_file = mk_tmp_file(tmp_path, key_to_pop="pages.page1.page_title")
     config_file = mk_tmp_file(tmp_path, config_to_clone=config_file, key_to_pop="pages.page2")
-    _ = runner.invoke(app, ['--page-name', page_name, '--config', str(config_file), 'validate'])
-    assert state.config.pages[0].page_name == page_name
+    _ = runner.invoke(app, ['--page-title', page_title, '--config', str(config_file), 'validate'])
+    assert state.config.pages[0].page_title == page_title
 
 
 def test_debug_in_state():

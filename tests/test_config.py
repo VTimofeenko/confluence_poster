@@ -11,7 +11,7 @@ def test_repo_sample_config():
     """General wellness test. The default config from repo should always work."""
     _ = Config("config.toml")
     # Just some random checks
-    assert _.pages[0].page_name == "Some page name"
+    assert _.pages[0].page_title == "Some page name"
     assert len(_.pages) == 2
     assert _.author == ""
 
@@ -60,7 +60,7 @@ def test_default_space(tmp_path):
     """Tests that space definition is applied from default section and
      it does not override specific definition from page """
     config_file = mk_tmp_file(tmp_path, key_to_pop="pages.page1.page_space",
-                              key_to_update="pages.page2", value_to_update={'page_name': 'Page2',
+                              key_to_update="pages.page2", value_to_update={'page_title': 'Page2',
                                                                             'page_file': '',
                                                                             'page_space': 'some_space'})
     _ = Config(config_file)
@@ -73,7 +73,7 @@ def test_default_space(tmp_path):
 def test_default_space_multiple_pages_default(tmp_path):
     """Checks that the default space is applied if there are two pages with no space specified - default is applied"""
     config_file = mk_tmp_file(tmp_path, key_to_pop="pages.page1.page_space",
-                              key_to_update="pages.page2", value_to_update={'page_name': 'Page2',
+                              key_to_update="pages.page2", value_to_update={'page_title': 'Page2',
                                                                             'page_file': ''})
     _ = Config(config_file)
     for page in _.pages:
@@ -120,7 +120,7 @@ def test_page_definition_not_str(tmp_path):
 
 def test_page_no_name_or_path(tmp_path):
     """Checks that lack of mandatory Page definition is handled with an exception"""
-    for page_def in [_.name for _ in fields(Page) if _.name not in ['page_space', 'page_name']]:
+    for page_def in [_.name for _ in fields(Page) if _.name not in ['page_space', 'page_title']]:
         config_file = mk_tmp_file(tmp_path, key_to_pop=f"pages.page1.{page_def}")
         with pytest.raises(KeyError):
             _ = Config(config_file)
@@ -128,15 +128,15 @@ def test_page_no_name_or_path(tmp_path):
 
 def test_one_page_no_name(tmp_path):
     """Tests that page's name can be none for one page case"""
-    config_file = mk_tmp_file(tmp_path, key_to_pop=f"pages.page1.page_name")
+    config_file = mk_tmp_file(tmp_path, key_to_pop=f"pages.page1.page_title")
     config_file = mk_tmp_file(tmp_path, config_to_clone=config_file, key_to_pop=f"pages.page2")
     _ = Config(config_file)
-    assert _.pages[0].page_name is None
+    assert _.pages[0].page_title is None
 
 
 def test_more_pages_no_name(tmp_path):
-    config_file = mk_tmp_file(tmp_path, key_to_pop="pages.page1.page_name",
-                              key_to_update="pages.page2", value_to_update={'page_name': "Page2", "page_file": ''})
+    config_file = mk_tmp_file(tmp_path, key_to_pop="pages.page1.page_title",
+                              key_to_update="pages.page2", value_to_update={'page_title': "Page2", "page_file": ''})
     with pytest.raises(ValueError) as e:
         _ = Config(config_file)
     assert "more than 1 page" in e.value.args[0]
@@ -147,7 +147,7 @@ def test_two_pages_same_name_same_space(tmp_path):
     config_file = mk_tmp_file(tmp_path)
     config = Config(config_file)
     config_file = mk_tmp_file(tmp_path, config_to_clone=config_file,
-                              key_to_update="pages.page2", value_to_update={'page_name': config.pages[0].page_name,
+                              key_to_update="pages.page2", value_to_update={'page_title': config.pages[0].page_title,
                                                                             "page_file": '',
                                                                             'page_space': config.pages[0].page_space})
     with pytest.raises(ValueError) as e:
@@ -160,10 +160,10 @@ def test_two_pages_same_name_different_space(tmp_path):
     config_file = mk_tmp_file(tmp_path)
     config = Config(config_file)
     config_file = mk_tmp_file(tmp_path, config_to_clone=config_file,
-                              key_to_update="pages.page2", value_to_update={'page_name': config.pages[0].page_name,
+                              key_to_update="pages.page2", value_to_update={'page_title': config.pages[0].page_title,
                                                                             "page_file": '',
                                                                             'page_space': ''})
     _ = Config(config_file)
     assert len(_.pages) == 2
     for page in _.pages:
-        assert page.page_name == config.pages[0].page_name
+        assert page.page_title == config.pages[0].page_title

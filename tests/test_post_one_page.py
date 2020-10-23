@@ -35,7 +35,7 @@ def run_with_title(page_title: str = None, fake_title=True, *args, **kwargs,):
     elif fake_title is False and page_title is None:
         raise ValueError("Fake title is False and no real title was provided")
 
-    return run_with_config(pre_args=['--page-name', page_title], *args, **kwargs), page_title
+    return run_with_config(pre_args=['--page-title', page_title], *args, **kwargs), page_title
 
 
 @pytest.fixture(scope='function')
@@ -53,8 +53,8 @@ def test_page_overridden_title(make_one_page_config):
     assert result.exit_code == 0
     created_page_title = get_page_title(get_page_id_from_stdout(result.stdout))
     assert created_page_title == page_title, "Page title was not applied from command line"
-    assert created_page_title != config.pages[0].page_name, "Page title is the same as in config," \
-                                                            " should have been overwritten"
+    assert created_page_title != config.pages[0].page_title, "Page title is the same as in config," \
+                                                             " should have been overwritten"
 
 
 def test_post_single_page_no_parent(make_one_page_config):
@@ -82,7 +82,7 @@ def test_not_create_if_refused(make_one_page_config):
                              config_file=config_file)
     assert result.exit_code == 0
     assert 'Not creating page' in result.stdout, "Script did not report that page is not created"
-    assert not page_created(page_title=config.pages[0].page_name), "Page was not supposed to be created"
+    assert not page_created(page_title=config.pages[0].page_title), "Page was not supposed to be created"
     assert len(get_pages_ids_from_stdout(result.stdout)) == 0, "Detected a page that was created!"
 
 
@@ -96,16 +96,16 @@ def setup_page(tmp_path, record_pages):
                              config_file=config_file,
                              record_pages=record_pages)
     assert result.exit_code == 0
-    return get_page_id_from_stdout(result.stdout), config.pages[0].page_name
+    return get_page_id_from_stdout(result.stdout), config.pages[0].page_title
 
 
 def test_post_single_page_with_parent(setup_page):
     # Create the first page, it will be the parent
-    parent_id, parent_page_name = setup_page
+    parent_id, parent_page_title = setup_page
     # create the second page, it will be a child
     result, _ = run_with_title(input=f"Y\n"  # create page
                                      f"Y\n"  # look for parent
-                                     f"{parent_page_name}\n"  # title of the parent
+                                     f"{parent_page_title}\n"  # title of the parent
                                      f"Y\n",  # yes, proceed to create
                                config_file=real_confluence_config)
     assert result.exit_code == 0
@@ -123,7 +123,7 @@ def test_post_force_overwrite_same_author(tmp_path, setup_page):
     page_id, page_title = setup_page
 
     force_result = run_with_config(config_file=overwrite_config,
-                                   pre_args=['--force', '--page-name', page_title])
+                                   pre_args=['--force', '--page-title', page_title])
     assert "Updating page" in force_result.stdout
     assert new_text in get_page_body(page_id)
     check_body_and_title(page_id, body_text=new_text, title_text=page_title)
@@ -138,7 +138,7 @@ def test_post_force_overwrite_other_author(tmp_path, setup_page):
     overwrite_config = mk_tmp_file(tmp_path,
                                    config_to_clone=str(overwrite_config),
                                    key_to_update="author", value_to_update=f"Fake: {fake_username}")
-    force_result = run_with_config(config_file=overwrite_config, pre_args=['--force', '--page-name', page_title])
+    force_result = run_with_config(config_file=overwrite_config, pre_args=['--force', '--page-title', page_title])
     assert "Updating page" in force_result.stdout
     assert new_text in get_page_body(page_id)
     check_body_and_title(page_id, body_text=new_text, title_text=page_title)
@@ -154,7 +154,7 @@ def test_post_no_overwrite_other_author_no_force(tmp_path, setup_page):
     overwrite_config = mk_tmp_file(tmp_path,
                                    config_to_clone=str(overwrite_config),
                                    key_to_update="author", value_to_update=f"Fake: {fake_username}")
-    overwrite_result = run_with_config(config_file=overwrite_config, pre_args=['--page-name', page_title])
+    overwrite_result = run_with_config(config_file=overwrite_config, pre_args=['--page-title', page_title])
     assert overwrite_result.exit_code == 0
     assert "Flag 'force' is not set and last author" in overwrite_result.stdout
     assert original_username in overwrite_result.stdout, \
@@ -169,7 +169,7 @@ def test_create_and_overwrite_page(tmp_path, setup_page):
     overwrite_file, new_text, overwrite_config = mk_fake_file(tmp_path, filename='overwrite')
     page_id, page_title = setup_page
 
-    overwrite_result = run_with_config(config_file=overwrite_config, pre_args=['--page-name', page_title])
+    overwrite_result = run_with_config(config_file=overwrite_config, pre_args=['--page-title', page_title])
     assert overwrite_result.exit_code == 0
     assert "Updating page" in overwrite_result.stdout
     check_body_and_title(page_id, body_text=new_text, title_text=page_title)

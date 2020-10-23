@@ -36,7 +36,7 @@ def test_post_multiple_pages(make_two_pages):
     assert result.exit_code == 0
     assert result.stdout.count("Creating page") == 2
     for page in config.pages:
-        assert page_created(page.page_name)
+        assert page_created(page.page_title)
 
 
 def test_one_page_refuse_other_posted(make_two_pages):
@@ -49,8 +49,8 @@ def test_one_page_refuse_other_posted(make_two_pages):
                                    "N\n")  # do not create the second page
     assert result.exit_code == 0
     assert result.stdout.count("Creating page") == 1
-    assert page_created(page_title=config.pages[0].page_name)
-    assert not page_created(page_title=config.pages[1].page_name), \
+    assert page_created(page_title=config.pages[0].page_title)
+    assert not page_created(page_title=config.pages[1].page_title), \
         "The second page should not have been created"
 
 
@@ -72,7 +72,7 @@ def test_one_author_correct_other_not(make_two_pages, tmp_path, force):
     other_author_config_file = mk_tmp_file(tmp_path, filename="other_author.toml",
                                            config_to_clone=other_user_config,
                                            key_to_update="pages.page1", value_to_update={
-                                                                                            'page_name': page.page_name,
+                                                                                            'page_title': page.page_title,
                                                                                             'page_file': new_page_file,
                                                                                         })
     result = run_with_config(config_file=other_author_config_file,
@@ -95,7 +95,7 @@ def test_one_author_correct_other_not(make_two_pages, tmp_path, force):
         # Check that all pages are updated
         config = Config(config_file)  # need to reload config here
         for page in config.pages:
-            page_id = confluence_instance.get_page_by_title(space=page.page_space, title=page.page_name)['id']
+            page_id = confluence_instance.get_page_by_title(space=page.page_space, title=page.page_title)['id']
             with open(page.page_file, 'r') as f:
                 page_content = f.read()
                 assert page_content in get_page_body(page_id)
@@ -105,14 +105,14 @@ def test_one_author_correct_other_not(make_two_pages, tmp_path, force):
         assert result.stdout.count("Updating page") == 1
         # Check that first page is updated
         page = config.pages[0]
-        page_id = confluence_instance.get_page_by_title(space=page.page_space, title=page.page_name)['id']
+        page_id = confluence_instance.get_page_by_title(space=page.page_space, title=page.page_title)['id']
         with open(page.page_file, 'r') as f:
             page_content = f.read()
             assert page_content in get_page_body(page_id)
 
         # Check that second page is not
         page = config.pages[1]
-        page_id = confluence_instance.get_page_by_title(space=page.page_space, title=page.page_name)['id']
+        page_id = confluence_instance.get_page_by_title(space=page.page_space, title=page.page_title)['id']
         with open(page.page_file, 'r') as f:
             page_content = f.read()
             assert page_content not in get_page_body(page_id)
@@ -130,11 +130,11 @@ def test_one_page_parent_of_other(make_two_pages):
                                    "Y\n"  # create in root
                                    "Y\n"  # create second page
                                    "Y\n"  # look for parent
-                                   f"{parent_page.page_name}\n"  # page name
+                                   f"{parent_page.page_title}\n"  # page name
                                    "Y\n")
     assert result.exit_code == 0
-    child_page_id = confluence_instance.get_page_id(space=parent_page.page_space, title=child_page.page_name)
-    parent_page_id = confluence_instance.get_page_id(space=parent_page.page_space, title=parent_page.page_name)
+    child_page_id = confluence_instance.get_page_id(space=parent_page.page_space, title=child_page.page_title)
+    parent_page_id = confluence_instance.get_page_id(space=parent_page.page_space, title=parent_page.page_title)
     assert confluence_instance.get_parent_content_id(child_page_id) == parent_page_id
     assert all([_ in get_pages_ids_from_stdout(result.stdout) for _ in [child_page_id, parent_page_id]])
 
@@ -159,7 +159,7 @@ def test_update_both_pages(make_two_pages, tmp_path):
     assert result.exit_code == 0
     assert result.stdout.count("Updating page") == 2
     for page in config.pages:
-        page_id = confluence_instance.get_page_by_title(space=page.page_space, title=page.page_name)['id']
+        page_id = confluence_instance.get_page_by_title(space=page.page_space, title=page.page_title)['id']
         with open(page.page_file, 'r') as f:
             page_content = f.read()
             assert page_content in get_page_body(page_id)

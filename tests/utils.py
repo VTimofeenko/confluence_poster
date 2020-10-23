@@ -139,7 +139,7 @@ def generate_local_config(tmp_path, pages: int = 1) -> (str, Config):
                                  config_to_clone=new_config,
                                  key_to_update=f"pages.page{page_number+1}",
                                  value_to_update={
-                                     "page_name": title,
+                                     "page_title": title,
                                      "page_file": filename
 
                                  })
@@ -207,14 +207,14 @@ def run_with_config(config_file, default_run_cmd: Callable, record_pages: set = 
     config = Config(config_file)
     for page_id in _created_pages:
         """Make sure that the pages got created with proper content"""
-        if 'pre_args' in kwargs and '--page-name' in kwargs.get("pre_args"):
+        if 'pre_args' in kwargs and '--page-title' in kwargs.get("pre_args"):
             # Page title specified manually, only one page in config
             found_page = config.pages[0]
-            _ = kwargs.get("pre_args").index('--page-name')
+            _ = kwargs.get("pre_args").index('--page-title')
             page_title = kwargs.get("pre_args")[_ + 1]
         else:
             page_title = get_page_title(page_id)
-            found_page: Page = next(_ for _ in config.pages if _.page_name == page_title)
+            found_page: Page = next(_ for _ in config.pages if _.page_title == page_title)
 
         with open(found_page.page_file, 'r') as page_file:
             page_text = page_file.read()

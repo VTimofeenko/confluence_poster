@@ -7,7 +7,7 @@ from itertools import groupby
 
 @dataclass
 class Page:
-    page_name: str
+    page_title: str
     page_file: str
     page_space: Union[str, None]
 
@@ -49,7 +49,7 @@ class Config(object):
                         if not isinstance(item_content[prop], str):
                             raise ValueError(f"{prop} property of a page is not a string")
 
-                    page = Page(item_content.get('page_name', None),
+                    page = Page(item_content.get('page_title', None),
                                 item_content['page_file'],
                                 item_content.get('page_space', None))
                     self.__pages.append(page)
@@ -65,22 +65,22 @@ class Config(object):
                 if default_space is not None:
                     page.page_space = default_space
                 else:
-                    raise ValueError(f"Page '{page.page_name}' does not have page_space specified,"
+                    raise ValueError(f"Page '{page.page_title}' does not have page_space specified,"
                                      f" neither is default space")
-            if page.page_name is None and len(self.__pages) > 1:
+            if page.page_title is None and len(self.__pages) > 1:
                 raise ValueError("There are more than 1 page, and one of the names is not specified")
 
             # Check that there are no pages with same space and name - they will overwrite each other
-            page_name_func = attrgetter('page_name')
+            page_title_func = attrgetter('page_title')
             page_space_func = attrgetter('page_space')
-            groups = groupby(sorted(self.__pages, key=page_name_func), page_name_func)
-            for page_name, g in groups:
+            groups = groupby(sorted(self.__pages, key=page_title_func), page_title_func)
+            for page_title, g in groups:
                 _ = list(g)
                 groups_space = groupby(sorted(_, key=page_space_func), page_space_func)
                 for space_name, group in groups_space:
                     _ = list(group)
                     if len(_) > 1:
-                        raise ValueError(f"There are more than 1 page called '{page_name}' in space {space_name}")
+                        raise ValueError(f"There are more than 1 page called '{page_title}' in space {space_name}")
 
     @property
     def auth(self):

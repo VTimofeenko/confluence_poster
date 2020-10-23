@@ -12,7 +12,7 @@ $ confluence_poster [OPTIONS] COMMAND [ARGS]...
 **General Options**:
 
 * `--config TEXT`: The file containing configuration.  [default: config.toml]
-* `--page-name TEXT`: Override page title from config.Applicable if there is only one page
+* `--page-title TEXT`: Override page title from config.Applicable if there is only one page
 * `--password TEXT`: Supply the password in command line.  [env var: CONFLUENCE_PASSWORD]
 * `--force / --no-force`: Force overwrite the pages.  [default: False]
 * `--debug / --no-debug`: Enable debug logging.  [default: False]
@@ -90,14 +90,14 @@ author = ""
 # Space should be defined as abbreviation, otherwise 403 error would be generated
 page_space = "default space"
 [pages.page1]
-page_name = "Some page name"
+page_title = "Some page name"
 # The name of text file with page contents
 page_file = "some_file.confluencewiki"
 # If specified - overrides the default page_space
 page_space = "some_space"
 
 [pages.page2]
-page_name = "Some other page name"
+page_title = "Some other page name"
 page_file = "some_other_file.confluencewiki"
 
 [auth]

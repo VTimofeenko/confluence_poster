@@ -28,8 +28,8 @@ def post_page():
     """Posts the content of the pages."""
     confluence = state.confluence_instance
     for page in state.config.pages:
-        typer.echo(f"Looking for page '{page.page_name}'")
-        if page_id := confluence.get_page_id(space=page.page_space, title=page.page_name):
+        typer.echo(f"Looking for page '{page.page_title}'")
+        if page_id := confluence.get_page_id(space=page.page_space, title=page.page_title):
             # Page exists
             typer.echo(f"Found page id #{page_id}")
 
@@ -41,12 +41,12 @@ def post_page():
                 else:
                     page_last_updated_by = page_last_updated_by['username']
                 if page_last_updated_by != state.config.author:
-                    typer.echo(f"Flag 'force' is not set and last author of page '{page.page_name}'"
+                    typer.echo(f"Flag 'force' is not set and last author of page '{page.page_title}'"
                                f" is {page_last_updated_by}, not {state.config.author}. Skipping page")
                     continue
             with open(page.page_file, 'r') as _:
                 typer.echo(f"Updating page #{page_id}")
-                confluence.update_existing_page(page_id=page_id, title=page.page_name, body=_.read(),
+                confluence.update_existing_page(page_id=page_id, title=page.page_title, body=_.read(),
                                                 representation='wiki')
         else:
             # Page does not exist. Confluence API reports it itself
@@ -73,14 +73,14 @@ def post_page():
                 with open(page.page_file, 'r') as _:
                     typer.echo("Creating page")
 
-                    response = confluence.create_page(space=page.page_space, title=page.page_name, body=_.read(),
+                    response = confluence.create_page(space=page.page_space, title=page.page_title, body=_.read(),
                                                       parent_id=parent_id,
                                                       representation='wiki')
                     page_id = response['id']
-                    typer.echo(f"Created page #{page_id} in space {page.page_space} called '{page.page_name}'")
+                    typer.echo(f"Created page #{page_id} in space {page.page_space} called '{page.page_title}'")
                     state.created_pages.append(int(page_id))
             else:
-                typer.echo(f"Not creating page '{page.page_name}'")
+                typer.echo(f"Not creating page '{page.page_title}'")
     typer.echo("Finished processing pages")
 
 
@@ -114,7 +114,7 @@ def upload_files(files: List[Path] = typer.Argument(..., help="Files to upload."
     target_page = state.config.pages[0]
     if len(state.config.pages) > 1:
         typer.echo('Upload files are provided, but there are more than 1 pages in the config.')
-        if typer.confirm(f"Continue by attaching all files to the first page, '{target_page.page_name}'?",
+        if typer.confirm(f"Continue by attaching all files to the first page, '{target_page.page_title}'?",
                          default=False):
             pass
         else:
@@ -122,7 +122,7 @@ def upload_files(files: List[Path] = typer.Argument(..., help="Files to upload."
             raise typer.Exit(1)
 
     if page_id := state.confluence_instance.get_page_id(space=target_page.page_space,
-                                                        title=target_page.page_name):
+                                                        title=target_page.page_title):
         typer.echo("Uploading the files")
         for path in files:
             if path.is_file():
@@ -133,13 +133,13 @@ def upload_files(files: List[Path] = typer.Argument(..., help="Files to upload."
                 typer.echo(f"\tSubmitted file {path.name}")
         typer.echo("Done uploading files")
     else:
-        typer.echo(f"Could not find page '{target_page.page_name}'. Aborting")
+        typer.echo(f"Could not find page '{target_page.page_title}'. Aborting")
         raise typer.Exit(1)
 
 
 @app.callback()
 def main(config: str = typer.Option(default="config.toml", help="The file containing configuration."),
-         page_name: Optional[str] = typer.Option(None, help="Override page title from config."
+         page_title: Optional[str] = typer.Option(None, help="Override page title from config."
                                                             "Applicable if there is only one page"),
          password: Optional[str] = typer.Option(None,
                                                 help="Supply the password in command line.",
@@ -170,11 +170,11 @@ def main(config: str = typer.Option(default="config.toml", help="The file contai
     state.config = confluence_config
 
     # Check that the page_title is not used with more than 1 page in the config
-    if page_name:
+    if page_title:
         if len(confluence_config.pages) > 1:
             typer.echo("Page title specified as a parameter but there are more than 1 page in the config. Aborting.")
             raise typer.Exit(1)
-        state.config.pages[0].page_name = page_name
+        state.config.pages[0].page_title = page_title
 
     # Validate password
     try:
