@@ -68,6 +68,7 @@ def test_one_page_no_title_in_config(tmp_path):
     """Checks that script runs correctly if no name is specified in config, but one is provided in cmdline"""
     page_name = "test_page"
     config_file = mk_tmp_file(tmp_path, key_to_pop="pages.page1.page_name")
+    config_file = mk_tmp_file(tmp_path, config_to_clone=config_file, key_to_pop="pages.page2")
     _ = runner.invoke(app, ['--page-name', page_name, '--config', str(config_file), 'validate'])
     assert state.config.pages[0].page_name == page_name
 

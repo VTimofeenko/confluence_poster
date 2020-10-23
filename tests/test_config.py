@@ -12,7 +12,7 @@ def test_repo_sample_config():
     _ = Config("config.toml")
     # Just some random checks
     assert _.pages[0].page_name == "Some page name"
-    assert len(_.pages) == 1
+    assert len(_.pages) == 2
     assert _.author == ""
 
 
@@ -129,6 +129,7 @@ def test_page_no_name_or_path(tmp_path):
 def test_one_page_no_name(tmp_path):
     """Tests that page's name can be none for one page case"""
     config_file = mk_tmp_file(tmp_path, key_to_pop=f"pages.page1.page_name")
+    config_file = mk_tmp_file(tmp_path, config_to_clone=config_file, key_to_pop=f"pages.page2")
     _ = Config(config_file)
     assert _.pages[0].page_name is None
 
