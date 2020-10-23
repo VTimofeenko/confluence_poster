@@ -61,7 +61,9 @@ def render_template() -> str:
     template = env.get_template('skeleton.jinja2')
     typer_cli_help: str = get_typer_cli_docs()
     chapters = process_chapters(typer_cli_help.split("##"))
-    return template.render(typer_help_chapters=chapters, tool_name=TOOL_NAME)
+
+    sample_config = Path('config.toml').read_text()
+    return template.render(typer_help_chapters=chapters, tool_name=TOOL_NAME, config_toml=sample_config)
 
 
 def generate_docs():

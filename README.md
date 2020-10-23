@@ -1,72 +1,119 @@
 # Description
 
-Supplementary script for writing confluence wiki articles in vim. Capable of alerting in case name of the last author is not the same one as in config so as to prevent collisions in versions.
+Supplementary script for writing confluence wiki articles in
+vim. Uses information from config.toml to post the article content to confluence.
 
-# Usage
+**Usage**:
 
-1. Copy `config.json.dict` file contents into the directory with the text file
-2. Fill in the blanks of the config file
-3. Run 
+```console
+$ confluence_poster [OPTIONS] COMMAND [ARGS]...
+```
 
-		# post_to_confluence --password ${PASSWORD}
+**General Options**:
 
-## Parameters
+* `--config TEXT`: The file containing configuration.  [default: config.toml]
+* `--page-name TEXT`: Override page title from config.Applicable if there is only one page
+* `--password TEXT`: Supply the password in command line.  [env var: CONFLUENCE_PASSWORD]
+* `--force / --no-force`: Force overwrite the pages.  [default: False]
+* `--debug / --no-debug`: Enable debug logging.  [default: False]
+* `--install-completion`: Install completion for the current shell.
+* `--show-completion`: Show completion for the current shell, to copy it or customize the installation.
+* `--help`: Show this message and exit.
 
-* `--password PASSWORD` — your confluence password
-* `--config CONFIG` — the file with the config by default - config.json in the same folder
-* `--force` — Force write the page, even if the last author is different from one specified in `author_to_check`
-* `--page_title PAGE_TITLE` — Allows overriding page title from config
-* `--upload_files UPLOAD_FILES [UPLOAD_FILES ...]` — Filenames to upload as attachments to `page_title`
-* `--debug` — Enable debug logging
+These options can be specified for any `COMMAND`.
 
-## Config
+**Commands**:
 
-Commented config:
+* `post-page`: Posts the content of the pages.
+* `upload-files`: Uploads the provided files.
+* `validate`: Validates the provided settings.
 
-	{
-		"file_to_open": "",			# the name of text file with page contents
-		"auth" : {
-			"confluence_url": "",	# URL of confluence instance
-			"username": "",			# usernmae for authentication
-			"password": "",			# password
-			"is_cloud": false		# see below
-		},
-		"author_to_check": "",		# if the page was not updated by the username specified here, throw an error
-		"page" : {
-			"title": "",			# specify page title
-			"space": ""}			# specify page space
-	}
+# Commands
+## `confluence_poster post-page`
 
-For copy-pasting purposes, file is [here](https://raw.githubusercontent.com/SabbathHex/confluence_poster/master/config.json.dist).
+Posts the content of the pages.
 
-### `password`
+**Usage**:
 
-It is probably a bad idea to have the password configured in a random file on the filesystem, so it is recommended to use this script with some external password manager, like [Passwordstore](https://www.passwordstore.org/). The script usage then becomes:
+```console
+$ confluence_poster post-page
+```
 
-	# post_to_confluence --password $(pass PATH_TO_PASSWORD_OR_TOKEN)
+## `confluence_poster upload-files`
 
-### `is_cloud`
+Uploads the provided files.
 
-This parameter defines some parts of the script's behavior, namely authentication and the way page edit history is treated. 
+**Usage**:
 
-Password works differently for online confluence. Follow [this link](https://confluence.atlassian.com/cloud/api-tokens-938839638.html) and generate a token. Use in place of password.
+```console
+$ confluence_poster upload-files FILES...
+```
 
-# Git integration
+**Arguments**:
 
-`contrib` directory has a git hook sample that runs `post_to_confluence` if the page change is commited.
+* `FILES...`: Files to upload.  [required]
+
+## `confluence_poster validate`
+
+Validates the provided settings. If 'online' is true - tries to fetch the space from the config using the
+supplied credentials.
+
+**Usage**:
+
+```console
+$ confluence_poster validate [OPTIONS]
+```
+
+**Options**:
+
+* `--online / --no-online`: Test the provided authentication settings on the actual instance of confluence.  [default: False]
+* `--help`: Show this message and exit.
 
 # Installation
 
-Download and install from [releases page](https://github.com/SabbathHex/confluence_poster/releases).
+Currently the project is installable through
 
-Alternatively, this package is available from [nitratesky](https://github.com/SabbathHex/nitratesky) overlay.
+```console
+$ pip install TODO
+```
 
-# Building
+# Config format
 
-Python's [zipapp](https://docs.python.org/3/library/zipapp.html) is used to build the "binary", see `build.sh` contents.
+Config file `config.toml` should be located in the directory where the confluence_poster is invoked. The format is as follows:
 
-# See also
+```toml
+# if the page was not updated by the username specified here, throw an error
+author = ""
 
-* [Vim confluencewiki syntax](https://www.vim.org/scripts/script.php?script_id=1994)
-* [Atlassian python API](https://atlassian-python-api.readthedocs.io/en/latest/) (On [Github](https://github.com/atlassian-api/atlassian-python-ap))
+[pages]
+[pages.default]
+# Space should be defined as abbreviation, otherwise 403 error would be generated
+page_space = "default space"
+[pages.page1]
+page_name = "Some page name"
+# The name of text file with page contents
+page_file = "some_file.confluencewiki"
+# If specified - overrides the default page_space
+page_space = "some_space"
 
+[pages.page2]
+page_name = "Some other page name"
+page_file = "some_other_file.confluencewiki"
+
+[auth]
+# URL of confluence instance
+confluence_url = ""
+# Username for authentication
+username = ""
+# Password may also be supplied through --password option or from an environment variable CONFLUENCE_PASSWORD
+password = ""
+# Whether the confluence instance is a "cloud" one
+is_cloud = false
+
+```
+
+**Note on password and Cloud instances**: if confluence is hosted by Atlassian, the password is the API token. Follow instructions at [this link](https://confluence.atlassian.com/cloud/api-tokens-938839638.html).
+
+# Contrib directory
+
+There are autocompletions for bash and zsh as well as a sample of [git post-commit hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks).

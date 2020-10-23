@@ -25,7 +25,7 @@ state = StateConfig()
 
 @app.command()
 def post_page():
-    """Posts the content of the pages specified in the config file"""
+    """Posts the content of the pages."""
     confluence = state.confluence_instance
     for page in state.config.pages:
         typer.echo(f"Looking for page '{page.page_name}'")
@@ -87,8 +87,9 @@ def post_page():
 @app.command()
 def validate(online: Optional[bool] = typer.Option(default=False,
                                                    help="Test the provided authentication settings on the actual"
-                                                        " instance of confluence")):
-    """Validates the provided settings. If 'online' is true - tries to fetch the space from the config"""
+                                                        " instance of confluence.")):
+    """Validates the provided settings. If 'online' is true - tries to fetch the space from the config using the
+    supplied credentials."""
     if online:
         typer.echo("Validating settings against the Confluence instance from config")
         try:
@@ -108,8 +109,8 @@ def validate(online: Optional[bool] = typer.Option(default=False,
 
 
 @app.command()
-def upload_files(files: List[Path]):
-    """Uploads the files specified in the command line"""
+def upload_files(files: List[Path] = typer.Argument(..., help="Files to upload.")):
+    """Uploads the provided files."""
     target_page = state.config.pages[0]
     if len(state.config.pages) > 1:
         typer.echo('Upload files are provided, but there are more than 1 pages in the config.')
@@ -137,14 +138,14 @@ def upload_files(files: List[Path]):
 
 
 @app.callback()
-def main(config: str = typer.Option(default="config.toml", help="The filename of config.json"),
+def main(config: str = typer.Option(default="config.toml", help="The file containing configuration."),
          page_name: Optional[str] = typer.Option(None, help="Override page title from config."
                                                             "Applicable if there is only one page"),
          password: Optional[str] = typer.Option(None,
-                                                help="Supply the password in command line",
+                                                help="Supply the password in command line.",
                                                 envvar="CONFLUENCE_PASSWORD"),
-         force: Optional[bool] = typer.Option(default=False, help="Force overwrite the pages"),
-         debug: Optional[bool] = typer.Option(default=False, help="Enable debug logging")):
+         force: Optional[bool] = typer.Option(default=False, help="Force overwrite the pages."),
+         debug: Optional[bool] = typer.Option(default=False, help="Enable debug logging.")):
     """ Supplementary script for writing confluence wiki articles in
     vim. Uses information from config.toml to post the article content to confluence.
     """

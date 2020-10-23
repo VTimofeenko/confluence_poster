@@ -12,12 +12,17 @@ page_file = "some_file.confluencewiki"
 # If specified - overrides the default page_space
 page_space = "some_space"
 
+[pages.page2]
+page_name = "Some other page name"
+page_file = "some_other_file.confluencewiki"
+
 [auth]
 # URL of confluence instance
 confluence_url = ""
 # Username for authentication
 username = ""
-# Password may also be supplied through --password option or from an environment variable
+# Password may also be supplied through --password option or from an environment variable CONFLUENCE_PASSWORD
 password = ""
+# Whether the confluence instance is a "cloud" one
 is_cloud = false
 
