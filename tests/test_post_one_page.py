@@ -89,7 +89,9 @@ def test_not_create_if_refused(make_one_page_config):
 @pytest.fixture(scope='function')
 def setup_page(tmp_path, record_pages):
     """Pre-creates a page"""
-    config_file, config = generate_local_config(tmp_path, pages=1)
+    config_file, config = generate_local_config(tmp_path,
+                                                pages=1,
+                                                filename="setup_page_config.toml")
     result = run_with_config(input="Y\n"  # create page
                                    "N\n"  # do not look for parent
                                    "Y\n",  # do create in root of the space
@@ -202,3 +204,29 @@ def test_skip_in_space_root():
     assert confluence_instance.get_page_by_title(space=real_config.pages[0].page_space,
                                                  title=page_title) is None, "Page should not had been created"
     assert len(get_pages_ids_from_stdout(result.stdout)) == 0, "Found a page number when it should not be found"
+
+
+@pytest.mark.parametrize("action", ["create", "update"])
+def test_minor_edit(action, make_one_page_config, tmp_path, setup_page):
+    """Tests that minor edit action is recorded on the page. API does not allow creation of the
+     page to be a minor edit, only an update"""
+    if action == "create":
+        config_file, config = make_one_page_config
+        result = run_with_config(config_file=config_file, pre_args=['--minor-edit'],
+                                 input="Y\nN\nY\n")
+        page_id = get_page_id_from_stdout(result.stdout)
+    else:
+        overwrite_file, new_text, overwrite_config = mk_fake_file(tmp_path, filename='overwrite')
+        page_id, page_title = setup_page
+
+        result = run_with_config(config_file=overwrite_config, pre_args=['--page-title', page_title, '--minor-edit'])
+
+    assert result.exit_code == 0
+    last_update = confluence_instance.get_content_history(page_id).get('lastUpdated')
+
+    if action == "create":
+        assert not last_update.get("minorEdit"), "Creation was marked as minor edit"
+    else:
+        # Looks like Atlassian stopped exposing this in the API :( no notifications are sent out though
+        with pytest.raises(AssertionError):
+            assert last_update.get("minorEdit"), "Page update was not marked as minor edit"

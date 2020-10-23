@@ -3,6 +3,7 @@ from confluence_poster.main import app
 from confluence_poster.main import main, state
 from utils import mk_tmp_file
 import pytest
+from dataclasses import asdict
 
 
 runner = CliRunner()
@@ -73,16 +74,12 @@ def test_one_page_no_title_in_config(tmp_path):
     assert state.config.pages[0].page_title == page_title
 
 
-def test_debug_in_state():
-    result = runner.invoke(app, ['--debug', 'validate'])
+@pytest.mark.parametrize("param", ["debug", "force", "minor_edit"])
+def test_binary_parameter_in_state(param):
+    """Checks that the binary parameters are reflected in state."""
+    result = runner.invoke(app, [f'--{param.replace("_", "-")}', 'validate'])
     assert result.exit_code == 0
-    assert state.debug
-
-
-def test_force_in_state():
-    result = runner.invoke(app, ['--force', 'validate'])
-    assert result.exit_code == 0
-    assert state.force
+    assert asdict(state).get(param)
 
 
 def test_cloud_api(tmp_path):

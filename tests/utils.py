@@ -57,8 +57,7 @@ def mk_tmp_file(tmp_path, filename: str = None,
     return config_file
 
 
-def clone_local_config(other_config: str = real_confluence_config,
-                       ):
+def clone_local_config(other_config: str = real_confluence_config):
     """Shorthand to copy the config to be used against local instance of confluence"""
     return partial(mk_tmp_file, config_to_clone=other_config)
 
@@ -129,10 +128,13 @@ def generate_fake_page(tmp_path) -> (str, str, str):
     return title, content, str(filename)
 
 
-def generate_local_config(tmp_path, pages: int = 1) -> (str, Config):
+def generate_local_config(tmp_path, pages: int = 1, filename: str = None) -> (str, Config):
     """Clones the auth and default space from local config, and generates the required amount of pages.
     Returns path to the new config and instance of it"""
-    new_config = clone_local_config()(tmp_path, key_to_pop="pages.page1")
+    if filename is None:
+        filename = "local_config.toml"
+
+    new_config = clone_local_config()(tmp_path, filename=filename, key_to_pop="pages.page1")
     for page_number in range(pages):
         title, _, filename = generate_fake_page(tmp_path)
         new_config = mk_tmp_file(tmp_path, filename=str(new_config),

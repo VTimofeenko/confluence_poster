@@ -16,6 +16,7 @@ class StateConfig:
     debug: bool = False
     confluence_instance: Union[None, Confluence] = None
     config: Union[None, Config] = None
+    minor_edit: bool = False
     created_pages: List[int] = field(default_factory=list)
 
 
@@ -47,7 +48,7 @@ def post_page():
             with open(page.page_file, 'r') as _:
                 typer.echo(f"Updating page #{page_id}")
                 confluence.update_existing_page(page_id=page_id, title=page.page_title, body=_.read(),
-                                                representation='wiki')
+                                                representation='wiki', minor_edit=state.minor_edit)
         else:
             # Page does not exist. Confluence API reports it itself
             typer.echo("Page not found")
@@ -145,6 +146,7 @@ def main(config: str = typer.Option(default="config.toml", help="The file contai
                                                 help="Supply the password in command line.",
                                                 envvar="CONFLUENCE_PASSWORD"),
          force: Optional[bool] = typer.Option(default=False, help="Force overwrite the pages."),
+         minor_edit: Optional[bool] = typer.Option(default=False, help="Do not notify watchers of pages updates"),
          debug: Optional[bool] = typer.Option(default=False, help="Enable debug logging.")):
     """ Supplementary script for writing confluence wiki articles in
     vim. Uses information from config.toml to post the article content to confluence.
@@ -168,6 +170,8 @@ def main(config: str = typer.Option(default="config.toml", help="The file contai
     typer.echo("Reading config")
     confluence_config = Config(config)
     state.config = confluence_config
+
+    state.minor_edit = minor_edit
 
     # Check that the page_title is not used with more than 1 page in the config
     if page_title:
