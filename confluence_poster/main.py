@@ -145,7 +145,8 @@ def main(config: str = typer.Option(default="config.toml", help="The file contai
          password: Optional[str] = typer.Option(None,
                                                 help="Supply the password in command line.",
                                                 envvar="CONFLUENCE_PASSWORD"),
-         force: Optional[bool] = typer.Option(default=False, help="Force overwrite the pages."),
+         force: Optional[bool] = typer.Option(default=False, help="Force overwrite the pages."
+                                                                  " Applicable if the author is different."),
          minor_edit: Optional[bool] = typer.Option(default=False, help="Do not notify watchers of pages updates"),
          debug: Optional[bool] = typer.Option(default=False, help="Enable debug logging.")):
     """ Supplementary script for writing confluence wiki articles in
