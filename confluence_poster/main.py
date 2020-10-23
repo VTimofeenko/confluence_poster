@@ -140,7 +140,7 @@ def upload_files(files: List[Path] = typer.Argument(..., help="Files to upload."
 @app.callback()
 def main(config: str = typer.Option(default="config.toml", help="The file containing configuration."),
          page_title: Optional[str] = typer.Option(None, help="Override page title from config."
-                                                            "Applicable if there is only one page"),
+                                                             "Applicable if there is only one page"),
          password: Optional[str] = typer.Option(None,
                                                 help="Supply the password in command line.",
                                                 envvar="CONFLUENCE_PASSWORD"),

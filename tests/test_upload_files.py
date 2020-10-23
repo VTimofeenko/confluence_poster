@@ -4,7 +4,6 @@ from confluence_poster.main import app
 from utils import generate_run_cmd, confluence_instance, run_with_config, generate_local_config, \
     get_page_id_from_stdout, fake_content_generator, page_created, fake_title_generator, get_pages_ids_from_stdout
 from functools import partial
-from time import sleep
 
 pytestmark = pytest.mark.online
 

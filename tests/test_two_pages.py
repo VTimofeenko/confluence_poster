@@ -71,10 +71,11 @@ def test_one_author_correct_other_not(make_two_pages, tmp_path, force):
     *_, new_page_file = generate_fake_page(tmp_path)
     other_author_config_file = mk_tmp_file(tmp_path, filename="other_author.toml",
                                            config_to_clone=other_user_config,
-                                           key_to_update="pages.page1", value_to_update={
-                                                                                            'page_title': page.page_title,
-                                                                                            'page_file': new_page_file,
-                                                                                        })
+                                           key_to_update="pages.page1",
+                                           value_to_update={
+                                               'page_title': page.page_title,
+                                               'page_file': new_page_file,
+                                           })
     result = run_with_config(config_file=other_author_config_file,
                              pre_args=['--force'])
     assert result.exit_code == 0
