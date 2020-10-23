@@ -13,7 +13,7 @@ def test_repo_sample_config():
     # Just some random checks
     assert _.pages[0].page_title == "Some page name"
     assert len(_.pages) == 2
-    assert _.author == ""
+    assert _.author == "author_username"
 
 
 def test_no_auth(tmp_path):
@@ -48,9 +48,10 @@ def test_no_author_use_from_auth(tmp_path):
     assert _.author == _.auth.username
 
 
-def test_author_not_str(tmp_path):
-    """Checks that exception is thrown if author is not a string"""
-    config_file = mk_tmp_file(tmp_path, key_to_update="author", value_to_update=1)
+@pytest.mark.parametrize("author_name", [1, ""])
+def test_author_name_bad_value(tmp_path, author_name):
+    """Checks that exception is thrown if author is not a string or is a bad one"""
+    config_file = mk_tmp_file(tmp_path, key_to_update="author", value_to_update=author_name)
 
     with pytest.raises(ValueError):
         _ = Config(config_file)

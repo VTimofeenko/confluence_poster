@@ -1,6 +1,6 @@
 # If the page was not updated by the username specified here, throw an error.
 # If this setting is ommited - auth.username is used for checks.
-author = ""
+author = "author_username"
 
 [pages]
 [pages.default]
@@ -19,11 +19,11 @@ page_file = "some_other_file.confluencewiki"
 
 [auth]
 # URL of confluence instance
-confluence_url = ""
+confluence_url = "https://confluence.local"
 # Username for authentication
-username = ""
+username = "confluence_username"
 # Password may also be supplied through --password option or from an environment variable CONFLUENCE_PASSWORD
-password = ""
+password = "confluence_password"
 # Whether the confluence instance is a "cloud" one
 is_cloud = false
 

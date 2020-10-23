@@ -103,5 +103,8 @@ class Config(object):
             author = self.auth.username
         if not isinstance(author, str):
             raise ValueError("Author is not a string")
+        elif len(author) == 0:
+            raise ValueError("Author's name is specified in the config but is empty. "
+                             "Specify it or remove the setting to use the authentication username for checks.")
 
         self.__author = author
