@@ -119,9 +119,7 @@ def test_upload_files_multiple_pages_agree(setup_two_pages, gen_attachments):
                                   other_args=[file_to_upload])
     assert result.exit_code == 0
 
-    page_one, page_two = page_ids
-    # According to my experiments, confluence may lag a bit here. TODO: ugly.
-    sleep(1)
+    page_one, page_two = sorted(list(page_ids))
     assert len(confluence_instance.get_attachments_from_content(page_one)['results']) == 1
     assert confluence_instance.get_attachments_from_content(page_one)['results'][0]['title'] == filename
     assert len(confluence_instance.get_attachments_from_content(page_two)['results']) == 0, \
