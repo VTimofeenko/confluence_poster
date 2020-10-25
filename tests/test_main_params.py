@@ -18,19 +18,24 @@ def test_app_no_params_ok():
     assert main.__doc__.split('\n')[0] in result.stdout
 
 
-def test_app_nonexistent_file():
-    """Tries running command with a nonexistent config file specified"""
-    _ = runner.invoke(app, ['--config', 'nonexistent_file'])
-    assert _.exit_code == 2
+@pytest.mark.parametrize('config_file', [None, 'other'])
+def test_different_config(tmp_path, config_file):
+    """Tests that if the script reads from a specific config, not the default one
 
+    If the config is None - nonexistent file is provided"""
+    new_page_name = "different config"
+    if config_file is not None:
+        _config_file = mk_tmp_file(tmp_path, key_to_update="pages.page1.page_title", value_to_update=new_page_name)
+    else:
+        _config_file = 'nonexistent_config'
 
-def test_different_config(tmp_path):
-    """Tests that if the script reads from a specific config, not the default one"""
-    new_name = "different config"
-    config_file = mk_tmp_file(tmp_path, key_to_update="pages.page1.page_title", value_to_update=new_name)
-    _ = runner.invoke(app, ['--config', str(config_file), 'validate'])
-    assert _.exit_code == 0
-    assert state.config.pages[0].page_title == new_name
+    result = runner.invoke(app, ['--config', str(_config_file), 'validate'])
+    if config_file is not None:
+        assert result.exit_code == 0
+        assert state.config.pages[0].page_title == new_page_name
+    else:
+        assert result.exit_code == 1
+        assert type(result.exception) is FileNotFoundError
 
 
 @pytest.mark.parametrize("param", ['page_title', 'parent_page_title'])
@@ -44,28 +49,29 @@ def test_page_title_specified_two_pages(tmp_path, param):
     assert "Page title specified as a parameter" in _.stdout
 
 
-def test_no_passwords_anywhere(tmp_path):
-    """Checks that if there are no passwords specified anywhere, the validation fails"""
-    config_file = mk_tmp_file(tmp_path, key_to_pop="auth.password")
-    _ = runner.invoke(app, ['--config', str(config_file), 'validate'])
-    assert _.exit_code == 1
-    assert "Password is not specified" in _.stdout
+@pytest.mark.parametrize('password_source', [None, 'cmdline', 'environment', 'config'])
+def test_no_passwords_anywhere(tmp_path, password_source, monkeypatch):
+    """Checks that the password is applied, depending on the source.
+    If source is 'None' - no password is supplied anywhere and validation fails."""
+    if password_source is None:
+        config_file = mk_tmp_file(tmp_path, key_to_pop="auth.password")
+        result = runner.invoke(app, ['--config', str(config_file), 'validate'])
+    else:
+        if password_source == 'cmdline':
+            result = runner.invoke(app, ['--password', password_source, 'validate'])
+        elif password_source == 'environment':
+            monkeypatch.setenv('CONFLUENCE_PASSWORD', password_source)
+            result = runner.invoke(app, ['validate'])
+        else:
+            config_file = mk_tmp_file(tmp_path, key_to_update="auth.password", value_to_update=password_source)
+            result = runner.invoke(app, ['--config', str(config_file), 'validate'])
 
-
-def test_password_from_cmdline():
-    """Tests that password is parsed correctly from command line and is applied"""
-    test_password = "cmdline_password"
-    _ = runner.invoke(app, ['--password', test_password, 'validate'])
-    assert _.exit_code == 0
-    assert state.confluence_instance.password == test_password
-
-
-def test_password_from_environment(monkeypatch):
-    env_password = 'my_password_in_environment'
-    monkeypatch.setenv('CONFLUENCE_PASSWORD', env_password)
-    _ = runner.invoke(app, ['validate'])
-    assert _.exit_code == 0
-    assert state.confluence_instance.password == env_password
+    if password_source is None:
+        assert result.exit_code == 1
+        assert "Password is not specified" in result.stdout
+    else:
+        assert result.exit_code == 0
+        assert state.confluence_instance.password == password_source
 
 
 def test_one_page_no_title_in_config(tmp_path):

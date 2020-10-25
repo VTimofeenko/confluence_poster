@@ -140,36 +140,9 @@ def test_post_single_page_with_parent(setup_page, parent_page_title_source, tmp_
     assert get_page_id_from_stdout(result.stdout) in confluence_instance.get_child_id_list(parent_id)
 
 
-def test_post_force_overwrite_same_author(tmp_path, setup_page):
-    """Checks that even if force is specified and the author is the same - the page is overwritten.
-    If not - it would be silly"""
-    overwrite_file, new_text, overwrite_config = mk_fake_file(tmp_path, filename='overwrite')
-    page_id, page_title = setup_page
-
-    force_result = run_with_config(config_file=overwrite_config,
-                                   pre_args=['--force', '--page-title', page_title])
-    assert "Updating page" in force_result.stdout
-    assert new_text in get_page_body(page_id)
-    check_body_and_title(page_id, body_text=new_text, title_text=page_title)
-
-
-def test_post_force_overwrite_other_author(tmp_path, setup_page):
+@pytest.mark.parametrize('force_flag', [True, False])
+def test_post_force_overwrite_other_author(force_flag, tmp_path, setup_page):
     """Checks that force flag overwrites page if the author is different"""
-    overwrite_file, new_text, overwrite_config = mk_fake_file(tmp_path, filename='overwrite')
-    page_id, page_title = setup_page
-    fake_username = Faker().user_name()
-
-    overwrite_config = mk_tmp_file(tmp_path,
-                                   config_to_clone=str(overwrite_config),
-                                   key_to_update="author", value_to_update=f"Fake: {fake_username}")
-    force_result = run_with_config(config_file=overwrite_config, pre_args=['--force', '--page-title', page_title])
-    assert "Updating page" in force_result.stdout
-    assert new_text in get_page_body(page_id)
-    check_body_and_title(page_id, body_text=new_text, title_text=page_title)
-
-
-def test_post_no_overwrite_other_author_no_force(tmp_path, setup_page):
-    """Checks the page is not overwritten if the author is different"""
     overwrite_file, new_text, overwrite_config = mk_fake_file(tmp_path, filename='overwrite')
     page_id, page_title = setup_page
     original_username = real_config.author
@@ -178,22 +151,32 @@ def test_post_no_overwrite_other_author_no_force(tmp_path, setup_page):
     overwrite_config = mk_tmp_file(tmp_path,
                                    config_to_clone=str(overwrite_config),
                                    key_to_update="author", value_to_update=f"Fake: {fake_username}")
-    overwrite_result = run_with_config(config_file=overwrite_config, pre_args=['--page-title', page_title])
-    assert overwrite_result.exit_code == 0
-    assert "Flag 'force' is not set and last author" in overwrite_result.stdout
-    assert original_username in overwrite_result.stdout, \
-        "The original username should be mentioned in the script output"
-    assert fake_username in overwrite_result.stdout, "The author_to_check username should be mentioned in the script " \
-                                                     "output"
-    assert new_text not in get_page_body(page_id)
+    result = run_with_config(config_file=overwrite_config, pre_args=['--force'] * force_flag +
+                                                                    ['--page-title', page_title])
+    assert result.exit_code == 0
+
+    if force_flag:
+        assert "Updating page" in result.stdout, "User should be notified an update is happening"
+        assert new_text in get_page_body(page_id), "Page should had been updated"
+        check_body_and_title(page_id, body_text=new_text, title_text=page_title)
+    else:
+        assert "Flag 'force' is not set and last author" in result.stdout, "User should be notified why the script " \
+                                                                           "is not updating anything"
+        assert original_username in result.stdout, "The original username should be mentioned in the script output"
+        assert fake_username in result.stdout, "The author_to_check username should be mentioned in the script " \
+                                               "output"
+        assert new_text not in get_page_body(page_id), "Page should not had been updated"
 
 
-def test_create_and_overwrite_page(tmp_path, setup_page):
-    """Creates a page and overwrites it"""
+@pytest.mark.parametrize('force_flag', [False, True])
+def test_create_and_overwrite_page(force_flag, tmp_path, setup_page):
+    """Creates a page and overwrites it. Checks that the force_flag does not matter"""
     overwrite_file, new_text, overwrite_config = mk_fake_file(tmp_path, filename='overwrite')
     page_id, page_title = setup_page
 
-    overwrite_result = run_with_config(config_file=overwrite_config, pre_args=['--page-title', page_title])
+    overwrite_result = run_with_config(config_file=overwrite_config,
+                                       pre_args=['--force'] * force_flag +
+                                                ['--page-title', page_title])
     assert overwrite_result.exit_code == 0
     assert "Updating page" in overwrite_result.stdout
     check_body_and_title(page_id, body_text=new_text, title_text=page_title)
