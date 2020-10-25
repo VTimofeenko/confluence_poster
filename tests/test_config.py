@@ -119,12 +119,12 @@ def test_page_definition_not_str(tmp_path):
         assert f"{page_def} property of a page is not a string" in e.value.args[0]
 
 
-def test_page_no_name_or_path(tmp_path):
+@pytest.mark.parametrize("param_to_pop", ['page_file'])
+def test_page_no_name_or_path(tmp_path, param_to_pop):
     """Checks that lack of mandatory Page definition is handled with an exception"""
-    for page_def in [_.name for _ in fields(Page) if _.name not in ['page_space', 'page_title']]:
-        config_file = mk_tmp_file(tmp_path, key_to_pop=f"pages.page1.{page_def}")
-        with pytest.raises(KeyError):
-            _ = Config(config_file)
+    config_file = mk_tmp_file(tmp_path, key_to_pop=f"pages.page1.{param_to_pop}")
+    with pytest.raises(KeyError):
+        _ = Config(config_file)
 
 
 def test_one_page_no_name(tmp_path):
@@ -168,3 +168,12 @@ def test_two_pages_same_name_different_space(tmp_path):
     assert len(_.pages) == 2
     for page in _.pages:
         assert page.page_title == config.pages[0].page_title
+
+
+def test_page_parent_specified(tmp_path):
+    """Tests that the page parent is applied from the config file"""
+    parent_title = "Some parent title"
+    config_file = mk_tmp_file(tmp_path,
+                              key_to_update="pages.page1.page_parent_title", value_to_update=parent_title)
+    config = Config(config_file)
+    assert config.pages[0].parent_page_title == parent_title

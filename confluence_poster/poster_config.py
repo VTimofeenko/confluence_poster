@@ -10,6 +10,7 @@ class Page:
     page_title: str
     page_file: str
     page_space: Union[str, None]
+    parent_page_title: Union[str, None]
 
 
 @dataclass
@@ -51,7 +52,8 @@ class Config(object):
 
                     page = Page(item_content.get('page_title', None),
                                 item_content['page_file'],
-                                item_content.get('page_space', None))
+                                item_content.get('page_space', None),
+                                item_content.get('page_parent_title', None))
                     self.__pages.append(page)
             else:
                 raise ValueError("Pages section is malformed, refer to sample config.toml")

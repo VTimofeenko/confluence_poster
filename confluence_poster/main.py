@@ -26,6 +26,20 @@ state = StateConfig()
 
 @app.command()
 def post_page():
+    def find_parent(_parent_name: str, space: str) -> Union[int, None]:
+        """Helper function to locate the parent page. Returns page id. Returns None if page is not found"""
+        typer.echo(f"Looking for the parent page with title {_parent_name}")
+        if parent_page := confluence.get_page_by_title(space=space, title=_parent_name,
+                                                       expand=''):
+            # according to Atlassian REST API reference, '_links' is a legitimate way to access links
+            parent_link = confluence.url + parent_page["_links"]["webui"]
+            _parent_id = parent_page["id"]
+            typer.echo(f"Found page #{_parent_id}, called {_parent_name}. URL is:\n{parent_link}")
+            return _parent_id
+        else:
+            typer.echo(f"Parent page '{_parent_name}' not found")
+            return None
+
     """Posts the content of the pages."""
     confluence = state.confluence_instance
     for page in state.config.pages:
@@ -51,26 +65,28 @@ def post_page():
                                                 representation='wiki', minor_edit=state.minor_edit)
         else:
             # Page does not exist. Confluence API reports it itself
-            typer.echo("Page not found")
+            typer.echo(f"Page '{page.page_title}' not found")
             parent_id = None
             if typer.confirm("Should it be created?", default=True):
-                while typer.confirm(f"Should the script look for a parent in space {page.page_space}?"
-                                    f" (N to be prompted to create the page in the root)"):
-                    parent_name = typer.prompt("Which page should the script look for?")
-                    if parent_page := confluence.get_page_by_title(space=page.page_space, title=parent_name,
-                                                                   expand=''):
-                        # according to Atlassian REST API reference, '_links' is a legitimate way to access links
-                        parent_link = confluence.url + parent_page["_links"]["webui"]
-                        if typer.confirm(f"Found page #{parent_page['id']}, called {parent_name}. URL is:\n"
-                                         f"{parent_link}\n"
-                                         f"Proceed to create?"):
-                            parent_id = parent_page["id"]
-                            break
-
+                if not page.parent_page_title:
+                    while typer.confirm(f"Should the script look for a parent in space {page.page_space}?"
+                                        f" (N to be prompted to create the page in the space root)"):
+                        parent_name = typer.prompt("Which page should the script look for?")
+                        if parent_id := find_parent(parent_name, page.page_space):
+                            if typer.confirm(f"Proceed to create?"):
+                                break
+                    else:
+                        # If _parent_id stays None, page will be created in the root
+                        if not typer.confirm(f"Create the page in the root of {page.page_space}? N will skip the page"):
+                            continue
                 else:
-                    # If parent_id stays None, page will be created in the root
-                    if not typer.confirm(f"Create the page in the root of {page.page_space}? N will skip the page"):
+                    typer.echo(f"Creating under the specified parent page {page.parent_page_title}")
+                    parent_id = find_parent(page.parent_page_title, page.page_space)
+                    if parent_id is None:
+                        typer.echo(f"Parent page '{page.parent_page_title}' not found in space '{page.page_space}'. "
+                                   f"Skipping page.")
                         continue
+
                 with open(page.page_file, 'r') as _:
                     typer.echo("Creating page")
 
@@ -141,7 +157,9 @@ def upload_files(files: List[Path] = typer.Argument(..., help="Files to upload."
 @app.callback()
 def main(config: str = typer.Option(default="config.toml", help="The file containing configuration."),
          page_title: Optional[str] = typer.Option(None, help="Override page title from config."
-                                                             "Applicable if there is only one page"),
+                                                             " Applicable if there is only one page."),
+         parent_page_title: Optional[str] = typer.Option(None, help="Provide a parent title to search for"
+                                                                    " Applicable if there is only one page."),
          password: Optional[str] = typer.Option(None,
                                                 help="Supply the password in command line.",
                                                 envvar="CONFLUENCE_PASSWORD"),
@@ -174,12 +192,15 @@ def main(config: str = typer.Option(default="config.toml", help="The file contai
 
     state.minor_edit = minor_edit
 
-    # Check that the page_title is not used with more than 1 page in the config
-    if page_title:
+    # Check that the parameters are not used with more than 1 page in the config
+    if page_title or parent_page_title:
         if len(confluence_config.pages) > 1:
             typer.echo("Page title specified as a parameter but there are more than 1 page in the config. Aborting.")
             raise typer.Exit(1)
-        state.config.pages[0].page_title = page_title
+        if page_title:
+            state.config.pages[0].page_title = page_title
+        if parent_page_title:
+            state.config.pages[0].parent_page_title = parent_page_title
 
     # Validate password
     try:

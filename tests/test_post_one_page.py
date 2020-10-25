@@ -71,7 +71,7 @@ def test_post_single_page_no_parent(make_one_page_config):
     assert 'Should it be created?' in result.stdout  # checking the prompt
     assert 'Should the script look for a parent in space' in result.stdout  # checking the prompt
     assert 'Create the page in the root' in result.stdout  # checking the prompt
-    assert "Page not found" in result.stdout
+    assert f"Page '{config.pages[0].page_title}' not found" in result.stdout
     assert "Creating page" in result.stdout
     assert "Finished processing pages" in result.stdout
 
@@ -101,20 +101,42 @@ def setup_page(tmp_path, record_pages):
     return get_page_id_from_stdout(result.stdout), config.pages[0].page_title
 
 
-def test_post_single_page_with_parent(setup_page):
+@pytest.mark.parametrize("parent_page_title_source", ['dialog', 'cmdline', 'config'])
+def test_post_single_page_with_parent(setup_page, parent_page_title_source, tmp_path):
+    """Tests that the parent_page_title is applied to create the page in the proper place.
+    Tests scenarios of providing the parent title in dialog (through user input), as --parent-page-title argument,
+    or in config"""
+
     # Create the first page, it will be the parent
     parent_id, parent_page_title = setup_page
-    # create the second page, it will be a child
-    result, _ = run_with_title(input=f"Y\n"  # create page
-                                     f"Y\n"  # look for parent
-                                     f"{parent_page_title}\n"  # title of the parent
-                                     f"Y\n",  # yes, proceed to create
-                               config_file=real_confluence_config)
-    assert result.exit_code == 0
-    assert "Which page should the script look for?" in result.stdout
+    page_title = next(fake_title_generator)
+
+    if parent_page_title_source == 'dialog':
+        result, _ = run_with_title(input=f"Y\n"  # create page
+                                         f"Y\n"  # look for parent
+                                         f"{parent_page_title}\n"  # title of the parent
+                                         f"Y\n",  # yes, proceed to create
+                                   config_file=real_confluence_config)
+        assert "Which page should the script look for?" in result.stdout
+        assert "URL is:" in result.stdout
+        assert "Proceed to create?" in result.stdout
+    else:
+
+        if parent_page_title_source == 'cmdline':
+            result = run_with_config(input=f"Y\n",  # create page
+                                     pre_args=['--parent-page-title', parent_page_title, '--page-title', page_title],
+                                     config_file=real_confluence_config)
+        else:
+            config_file = mk_tmp_file(tmp_path=tmp_path,
+                                      key_to_update="pages.page1.page_parent_title",
+                                      value_to_update=parent_page_title)
+            result, _ = run_with_title(input=f"Y\n",  # create page
+                                       config_file=config_file)
+        assert "Which page should the script look for?" not in result.stdout, \
+            "If the parent page title is explicitly supplied, script should not look for parent"
+
     assert "Found page #" in result.stdout
-    assert "URL is:" in result.stdout
-    assert "Proceed to create?" in result.stdout
+    assert result.exit_code == 0
     assert get_page_id_from_stdout(result.stdout) in confluence_instance.get_child_id_list(parent_id)
 
 
@@ -230,3 +252,32 @@ def test_minor_edit(action, make_one_page_config, tmp_path, setup_page):
         # Looks like Atlassian stopped exposing this in the API :( no notifications are sent out though
         with pytest.raises(AssertionError):
             assert last_update.get("minorEdit"), "Page update was not marked as minor edit"
+
+
+def test_create_page_under_nonexistent_parent(tmp_path, make_one_page_config):
+    """Tries to create a page under a non-existent parent, ensures that it fails and reports"""
+    config_file, config = make_one_page_config
+    parent_page_title = next(fake_title_generator)
+    config_file = mk_tmp_file(tmp_path=tmp_path,
+                              config_to_clone=config_file,
+                              key_to_update="pages.page1.page_parent_title",
+                              value_to_update=parent_page_title)
+    result = run_with_config(input=f"Y\n",  # create page
+                             config_file=config_file)
+    assert result.exit_code == 0
+    assert f"page '{parent_page_title}' not found" in result.stdout
+    assert "Skipping page" in result.stdout
+
+
+def test_search_for_parent_multiple_times(make_one_page_config):
+    """Checks that the user can retry searching for a parent if it is not found"""
+    config_file, config = make_one_page_config
+    attempts = 3  # how many times to try to look for parent
+    nl = '\n'  # to work around f-string '\' limitation
+    result = run_with_config(input="Y\n"  # create page
+                                   f"{attempts * ('Y' + nl + next(fake_title_generator) + nl)}"  # try to look 
+                                   "N\n"  # finally, refuse to look for parent
+                                   "Y\n",  # create in root
+                             config_file=config_file)
+    assert result.exit_code == 0
+    assert result.stdout.count("Should the script look for a parent in space") == attempts + 1  # +1 because refusal

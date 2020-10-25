@@ -33,10 +33,13 @@ def test_different_config(tmp_path):
     assert state.config.pages[0].page_title == new_name
 
 
-def test_page_title_specified_two_pages(tmp_path):
+@pytest.mark.parametrize("param", ['page_title', 'parent_page_title'])
+def test_page_title_specified_two_pages(tmp_path, param):
+    """For parameters that require that only one page is in config - make sure exception is raised if there are
+    more pages in the config"""
     config_file = mk_tmp_file(tmp_path, key_to_update="pages.page2", value_to_update={"page_title": "Page2",
                                                                                       "page_file": "page2.txt"})
-    _ = runner.invoke(app, ['--config', str(config_file), '--page-title', 'Default name', 'validate'])
+    _ = runner.invoke(app, ['--config', str(config_file), f"--{param.replace('_', '-')}", 'Default name', 'validate'])
     assert _.exit_code == 1
     assert "Page title specified as a parameter" in _.stdout
 
