@@ -25,7 +25,10 @@ state = StateConfig()
 
 
 @app.command()
-def post_page():
+def post_page(force_create: Optional[bool] = typer.Option(default=False, help="Disable prompts to create pages. "
+                                                                              "Script could still prompt for a "
+                                                                              "parent page.")):
+    """Posts the content of the pages."""
     def find_parent(_parent_name: str, space: str) -> Union[int, None]:
         """Helper function to locate the parent page. Returns page id. Returns None if page is not found"""
         typer.echo(f"Looking for the parent page with title {_parent_name}")
@@ -40,7 +43,6 @@ def post_page():
             typer.echo(f"Parent page '{_parent_name}' not found")
             return None
 
-    """Posts the content of the pages."""
     confluence = state.confluence_instance
     for page in state.config.pages:
         typer.echo(f"Looking for page '{page.page_title}'")
@@ -67,7 +69,7 @@ def post_page():
             # Page does not exist. Confluence API reports it itself
             typer.echo(f"Page '{page.page_title}' not found")
             parent_id = None
-            if typer.confirm("Should it be created?", default=True):
+            if force_create or typer.confirm("Should it be created?", default=True):
                 if not page.parent_page_title:
                     while typer.confirm(f"Should the script look for a parent in space {page.page_space}?"
                                         f" (N to be prompted to create the page in the space root)"):

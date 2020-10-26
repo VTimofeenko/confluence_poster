@@ -1,5 +1,5 @@
 # If the page was not updated by the username specified here, throw an error.
-# If this setting is ommited - auth.username is used for checks.
+# If this setting is omitted - auth.username is used for checks.
 author = "author_username"
 
 [pages]

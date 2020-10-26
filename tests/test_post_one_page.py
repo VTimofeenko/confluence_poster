@@ -264,3 +264,14 @@ def test_search_for_parent_multiple_times(make_one_page_config):
                              config_file=config_file)
     assert result.exit_code == 0
     assert result.stdout.count("Should the script look for a parent in space") == attempts + 1  # +1 because refusal
+
+
+def test_force_create_page(make_one_page_config):
+    """Tests the force_create flag."""
+    config_file, config = make_one_page_config
+    result = run_with_config(input="N\nY\n",  # do not look for parent, create in root
+                             other_args=['--force-create'],
+                             config_file=config_file)
+    assert result.exit_code == 0
+    assert 'Should it be created?' not in result.stdout  # flag overwrites the prompt
+    assert page_created(page_title=config.pages[0].page_title), "Page was supposed to be created"
