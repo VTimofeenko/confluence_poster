@@ -22,10 +22,12 @@ def make_two_pages(tmp_path):
     return generate_local_config(tmp_path, pages=2)
 
 
-def test_post_multiple_pages(make_two_pages):
+@pytest.mark.parametrize('with_report', [False, True])
+def test_post_multiple_pages(make_two_pages, with_report):
     """Checks that creation of two brand new pages in root of the space works fine"""
     config_file, config = make_two_pages
     result = run_with_config(config_file=config_file,
+                             pre_args=['--report'] * with_report,
                              input="Y\n"  # create first page
                                    "N\n"  # do not look for parent
                                    "Y\n"  # create in root
@@ -37,6 +39,11 @@ def test_post_multiple_pages(make_two_pages):
     assert result.stdout.count("Creating page") == 2
     for page in config.pages:
         assert page_created(page.page_title)
+        if with_report:
+            assert f"{page.page_space}::{page.page_title}" in result.stdout
+            assert result.stdout.index("Created pages:\n") <\
+                   result.stdout.index(f"{page.page_space}::{page.page_title}") <\
+                   result.stdout.index("Updated pages:\n")
 
 
 def test_one_page_refuse_other_posted(make_two_pages):

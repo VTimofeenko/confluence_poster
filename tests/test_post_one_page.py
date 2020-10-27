@@ -1,6 +1,6 @@
 from typer.testing import CliRunner
 import pytest
-from confluence_poster.main import app
+from confluence_poster.main import app, get_page_url
 from utils import clone_local_config, \
     generate_run_cmd,\
     real_confluence_config,\
@@ -76,14 +76,22 @@ def test_post_single_page_no_parent(make_one_page_config):
     assert "Finished processing pages" in result.stdout
 
 
-def test_not_create_if_refused(make_one_page_config):
+@pytest.mark.parametrize("with_report", [False, True])
+def test_not_create_if_refused(make_one_page_config, with_report):
     config_file, config = make_one_page_config
     result = run_with_config(input="N\n",  # it should not be created
+                             pre_args=['--report'] * with_report,
                              config_file=config_file)
     assert result.exit_code == 0
     assert 'Not creating page' in result.stdout, "Script did not report that page is not created"
     assert not page_created(page_title=config.pages[0].page_title), "Page was not supposed to be created"
     assert len(get_pages_ids_from_stdout(result.stdout)) == 0, "Detected a page that was created!"
+
+    if with_report:
+        page = config.pages[0]
+        assert get_page_url(page.page_title, page.page_space, confluence_instance) is None
+        assert "Created pages:\nNone\nUpdated pages:\nNone\nUnprocessed pages:" in result.stdout
+        assert f"{page.page_space}::{page.page_title} Reason: User cancelled creation when prompted"
 
 
 @pytest.fixture(scope='function')

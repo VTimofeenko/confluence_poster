@@ -1,12 +1,23 @@
 import typer
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Tuple
 from pathlib import Path
 from logging import basicConfig, DEBUG
-from confluence_poster.poster_config import Config
+from confluence_poster.poster_config import Config, Page
 from atlassian import Confluence
 from atlassian.errors import ApiError
 from dataclasses import dataclass, field
 from requests.exceptions import ConnectionError
+
+
+def get_page_url(page_title: str, space: str, confluence: Confluence) -> Union[str, None]:
+    """Retrieves page URL"""
+    if page := confluence.get_page_by_title(space=space, title=page_title,
+                                            expand=''):
+        # according to Atlassian REST API reference, '_links' is a legitimate way to access links
+        page_link = confluence.url + page["_links"]["webui"]
+        return page_link
+    else:
+        return None
 
 
 @dataclass
@@ -17,7 +28,35 @@ class StateConfig:
     confluence_instance: Union[None, Confluence] = None
     config: Union[None, Config] = None
     minor_edit: bool = False
+    print_report: bool = False
     created_pages: List[int] = field(default_factory=list)
+
+
+@dataclass
+class Report:
+    created_pages: List[Page] = field(default_factory=list)
+    updated_pages: List[Page] = field(default_factory=list)
+    unprocessed_pages: List[Tuple[Page, str]] = field(default_factory=list)
+    confluence_instance: Confluence = None
+
+    def __str__(self) -> str:
+        output = ''
+        for header, page_list in [("Created pages:", self.created_pages),
+                                  ("Updated pages:", self.updated_pages)]:
+            output += header + "\n"
+            if page_list:
+                for page in page_list:
+                    title = page.page_title
+                    space = page.page_space
+                    output += f"{space}::{title} {get_page_url(title, space, self.confluence_instance)}\n"
+            else:
+                output += "None\n"
+        if self.unprocessed_pages:
+            output += "Unprocessed pages:"
+            for page, reason in self.unprocessed_pages:
+                output += f"{page.page_space}::{page.page_title} Reason: {reason}"
+
+        return output
 
 
 app = typer.Typer()
@@ -29,13 +68,15 @@ def post_page(force_create: Optional[bool] = typer.Option(default=False, help="D
                                                                               "Script could still prompt for a "
                                                                               "parent page.")):
     """Posts the content of the pages."""
+    report = Report(confluence_instance=state.confluence_instance)
+
     def find_parent(_parent_name: str, space: str) -> Union[int, None]:
         """Helper function to locate the parent page. Returns page id. Returns None if page is not found"""
         typer.echo(f"Looking for the parent page with title {_parent_name}")
         if parent_page := confluence.get_page_by_title(space=space, title=_parent_name,
                                                        expand=''):
             # according to Atlassian REST API reference, '_links' is a legitimate way to access links
-            parent_link = confluence.url + parent_page["_links"]["webui"]
+            parent_link = get_page_url(_parent_name, space, confluence)
             _parent_id = parent_page["id"]
             typer.echo(f"Found page #{_parent_id}, called {_parent_name}. URL is:\n{parent_link}")
             return _parent_id
@@ -65,6 +106,7 @@ def post_page(force_create: Optional[bool] = typer.Option(default=False, help="D
                 typer.echo(f"Updating page #{page_id}")
                 confluence.update_existing_page(page_id=page_id, title=page.page_title, body=_.read(),
                                                 representation='wiki', minor_edit=state.minor_edit)
+                report.updated_pages += [page]
         else:
             # Page does not exist. Confluence API reports it itself
             typer.echo(f"Page '{page.page_title}' not found")
@@ -95,12 +137,17 @@ def post_page(force_create: Optional[bool] = typer.Option(default=False, help="D
                     response = confluence.create_page(space=page.page_space, title=page.page_title, body=_.read(),
                                                       parent_id=parent_id,
                                                       representation='wiki')
+                    report.created_pages += [page]
                     page_id = response['id']
                     typer.echo(f"Created page #{page_id} in space {page.page_space} called '{page.page_title}'")
-                    state.created_pages.append(int(page_id))
             else:
                 typer.echo(f"Not creating page '{page.page_title}'")
+                report.unprocessed_pages += [(page, "User cancelled creation when prompted")]
+
     typer.echo("Finished processing pages")
+
+    if state.print_report:
+        typer.echo(report)
 
 
 @app.command()
@@ -160,7 +207,7 @@ def upload_files(files: List[Path] = typer.Argument(..., help="Files to upload."
 def main(config: str = typer.Option(default="config.toml", help="The file containing configuration."),
          page_title: Optional[str] = typer.Option(None, help="Override page title from config."
                                                              " Applicable if there is only one page."),
-         parent_page_title: Optional[str] = typer.Option(None, help="Provide a parent title to search for"
+         parent_page_title: Optional[str] = typer.Option(None, help="Provide a parent title to search for."
                                                                     " Applicable if there is only one page."),
          password: Optional[str] = typer.Option(None,
                                                 help="Supply the password in command line.",
@@ -168,6 +215,7 @@ def main(config: str = typer.Option(default="config.toml", help="The file contai
          force: Optional[bool] = typer.Option(default=False, help="Force overwrite the pages."
                                                                   " Applicable if the author is different."),
          minor_edit: Optional[bool] = typer.Option(default=False, help="Do not notify watchers of pages updates"),
+         report: Optional[bool] = typer.Option(default=False, help="Print report at the end of the run"),
          debug: Optional[bool] = typer.Option(default=False, help="Enable debug logging.")):
     """ Supplementary script for writing confluence wiki articles in
     vim. Uses information from config.toml to post the article content to confluence.
@@ -183,10 +231,9 @@ def main(config: str = typer.Option(default="config.toml", help="The file contai
                     format='%(asctime)s %(levelname)s %(message)s')
     else:
         state.debug = False
-    if force:
-        state.force = True
-    else:
-        state.force = False
+
+    state.force = force
+    state.print_report = report
 
     typer.echo("Reading config")
     confluence_config = Config(config)

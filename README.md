@@ -13,10 +13,11 @@ $ confluence_poster [OPTIONS] COMMAND [ARGS]...
 
 * `--config TEXT`: The file containing configuration.  [default: config.toml]
 * `--page-title TEXT`: Override page title from config. Applicable if there is only one page.
-* `--parent-page-title TEXT`: Provide a parent title to search for Applicable if there is only one page.
+* `--parent-page-title TEXT`: Provide a parent title to search for. Applicable if there is only one page.
 * `--password TEXT`: Supply the password in command line.  [env var: CONFLUENCE_PASSWORD]
 * `--force / --no-force`: Force overwrite the pages. Applicable if the author is different.  [default: False]
 * `--minor-edit / --no-minor-edit`: Do not notify watchers of pages updates  [default: False]
+* `--report / --no-report`: Print report at the end of the run  [default: False]
 * `--debug / --no-debug`: Enable debug logging.  [default: False]
 * `--install-completion`: Install completion for the current shell.
 * `--show-completion`: Show completion for the current shell, to copy it or customize the installation.
