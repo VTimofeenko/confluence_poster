@@ -151,7 +151,9 @@ def post_page(force_create: Optional[bool] = typer.Option(default=False, help="D
 
 
 @app.command()
-def validate(online: Optional[bool] = typer.Option(default=False,
+def validate(online: Optional[bool] = typer.Option(False,
+                                                   "--online",
+                                                   show_default=False,
                                                    help="Test the provided authentication settings on the actual"
                                                         " instance of confluence.")):
     """Validates the provided settings. If 'online' is true - tries to fetch the space from the config using the
@@ -204,7 +206,9 @@ def upload_files(files: List[Path] = typer.Argument(..., help="Files to upload."
 
 
 @app.callback()
-def main(config: str = typer.Option(default="config.toml", help="The file containing configuration."),
+def main(config: Path = typer.Option(default="config.toml",
+                                     help="The file containing configuration. "
+                                          "If not specified - config.toml from the same directory is used"),
          page_title: Optional[str] = typer.Option(None, help="Override page title from config."
                                                              " Applicable if there is only one page."),
          parent_page_title: Optional[str] = typer.Option(None, help="Provide a parent title to search for."
@@ -212,11 +216,31 @@ def main(config: str = typer.Option(default="config.toml", help="The file contai
          password: Optional[str] = typer.Option(None,
                                                 help="Supply the password in command line.",
                                                 envvar="CONFLUENCE_PASSWORD"),
-         force: Optional[bool] = typer.Option(default=False, help="Force overwrite the pages."
-                                                                  " Applicable if the author is different."),
-         minor_edit: Optional[bool] = typer.Option(default=False, help="Do not notify watchers of pages updates"),
-         report: Optional[bool] = typer.Option(default=False, help="Print report at the end of the run"),
-         debug: Optional[bool] = typer.Option(default=False, help="Enable debug logging.")):
+         force: Optional[bool] = typer.Option(False,
+                                              "--force",
+                                              show_default=False,
+                                              help="Force overwrite the pages."
+                                                   " Applicable if the author is different."),
+         force_create: Optional[bool] = typer.Option(False,
+                                                     "--force-create",
+                                                     show_default=False,
+                                                     help="Disable prompts to create pages. "
+                                                          "Script could still prompt for a parent page."),
+         minor_edit: Optional[bool] = typer.Option(False,
+                                                   "--minor-edit",
+                                                   show_default=False,
+                                                   help="Do not notify watchers of pages updates. "
+                                                        "Not enabled by default."),
+         report: Optional[bool] = typer.Option(False,
+                                               '--report',
+                                               show_default=False,
+                                               help="Print report at the end of the run. "
+                                                    "Not enabled by default."),
+         debug: Optional[bool] = typer.Option(False,
+                                              '--debug',
+                                              show_default=False,
+                                              help="Enable debug logging. "
+                                                   "Not enabled by default.")):
     """ Supplementary script for writing confluence wiki articles in
     vim. Uses information from config.toml to post the article content to confluence.
     """
@@ -236,7 +260,7 @@ def main(config: str = typer.Option(default="config.toml", help="The file contai
     state.print_report = report
 
     typer.echo("Reading config")
-    confluence_config = Config(config)
+    confluence_config = Config(str(config))
     state.config = confluence_config
 
     state.minor_edit = minor_edit

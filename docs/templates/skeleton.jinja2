@@ -17,13 +17,6 @@ These options can be specified for any `COMMAND`.
 
 {{ section['options'] }}
 
-{% set section = typer_help_chapters['`confluence_poster upload-files`'] %}
-{{ section['intro'] }}
-
-{{ section['usage']|replace(" [OPTIONS]", "") }}
-
-{{ section['arguments'] }}
-
 {% set section = typer_help_chapters['`confluence_poster validate`'] %}
 {{ section['intro'] }}
 
@@ -41,7 +34,7 @@ $ pip install TODO
 
 # Config format
 
-Config file `config.toml` should be located in the directory where the {{ tool_name }} is invoked. The format is as follows:
+By default the {{ tool_name }} tries to look for config file `config.toml` in the directory where it is invoked. The format is as follows:
 
 ```toml
 {{ config_toml }}```
@@ -51,3 +44,9 @@ Config file `config.toml` should be located in the directory where the {{ tool_n
 # Contrib directory
 
 There are shell completions for bash and zsh as well as a sample of [git post-commit hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks).
+
+# See also
+
+* [Vim confluencewiki syntax](https://www.vim.org/scripts/script.php?script_id=1994)
+* [Paste confluence image in vim](https://github.com/SabbathHex/confluencewiki-img-paste.vim)
+* [Atlassian python API](https://atlassian-python-api.readthedocs.io/en/latest/) (On [Github](https://github.com/atlassian-api/atlassian-python-ap))

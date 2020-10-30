@@ -1,20 +1,22 @@
 # If the page was not updated by the username specified here, throw an error.
-# If this setting is omitted - auth.username is used for checks.
+# If this setting is omitted - username from auth section is used for checks.
 author = "author_username"
 
 [pages]
 [pages.default]
-# Space should be defined as abbreviation, otherwise 403 error would be generated
-page_space = "default space"
+# Space key. E.g. for space "local-dev" the space key is "LOC"
+# Space defined here will be used if a page section below does not specify it
+page_space = "DEFAULT_SPACE_KEY"
 [pages.page1]
-page_title = "Some page name"
-# The name of text file with page contents
+# The title of the page
+page_title = "Some page title"
+# The filename with page content
 page_file = "some_file.confluencewiki"
 # If specified - overrides the default page_space
-page_space = "some_space"
+page_space = "some_space_key"
 
 [pages.page2]
-page_title = "Some other page name"
+page_title = "Some other page title"
 page_file = "some_other_file.confluencewiki"
 
 [auth]
