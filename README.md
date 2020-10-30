@@ -11,14 +11,15 @@ $ confluence_poster [OPTIONS] COMMAND [ARGS]...
 
 **General Options**:
 
-* `--config TEXT`: The file containing configuration.  [default: config.toml]
+* `--config PATH`: The file containing configuration. If not specified - config.toml from the same directory is used  [default: config.toml]
 * `--page-title TEXT`: Override page title from config. Applicable if there is only one page.
 * `--parent-page-title TEXT`: Provide a parent title to search for. Applicable if there is only one page.
 * `--password TEXT`: Supply the password in command line.  [env var: CONFLUENCE_PASSWORD]
-* `--force / --no-force`: Force overwrite the pages. Applicable if the author is different.  [default: False]
-* `--minor-edit / --no-minor-edit`: Do not notify watchers of pages updates  [default: False]
-* `--report / --no-report`: Print report at the end of the run  [default: False]
-* `--debug / --no-debug`: Enable debug logging.  [default: False]
+* `--force`: Force overwrite the pages. Applicable if the author is different.
+* `--force-create`: Disable prompts to create pages. Script could still prompt for a parent page.
+* `--minor-edit`: Do not notify watchers of pages updates. Not enabled by default.
+* `--report`: Print report at the end of the run. Not enabled by default.
+* `--debug`: Enable debug logging. Not enabled by default.
 * `--install-completion`: Install completion for the current shell.
 * `--show-completion`: Show completion for the current shell, to copy it or customize the installation.
 * `--help`: Show this message and exit.
@@ -28,7 +29,6 @@ These options can be specified for any `COMMAND`.
 **Commands**:
 
 * `post-page`: Posts the content of the pages.
-* `upload-files`: Uploads the provided files.
 * `validate`: Validates the provided settings.
 
 # Commands
@@ -44,22 +44,8 @@ $ confluence_poster post-page [OPTIONS]
 
 **Options**:
 
-* `--force-create / --no-force-create`: Disable prompts to create pages. Script could still prompt for a parent page.  [default: False]
+* `--upload-files PATH`: Files to upload as attachments to page.
 * `--help`: Show this message and exit.
-
-## `confluence_poster upload-files`
-
-Uploads the provided files.
-
-**Usage**:
-
-```console
-$ confluence_poster upload-files FILES...
-```
-
-**Arguments**:
-
-* `FILES...`: Files to upload.  [required]
 
 ## `confluence_poster validate`
 
@@ -74,7 +60,7 @@ $ confluence_poster validate [OPTIONS]
 
 **Options**:
 
-* `--online / --no-online`: Test the provided authentication settings on the actual instance of confluence.  [default: False]
+* `--online`: Test the provided authentication settings on the actual instance of confluence.
 * `--help`: Show this message and exit.
 
 # Installation
@@ -87,26 +73,28 @@ $ pip install TODO
 
 # Config format
 
-Config file `config.toml` should be located in the directory where the confluence_poster is invoked. The format is as follows:
+By default the confluence_poster tries to look for config file `config.toml` in the directory where it is invoked. The format is as follows:
 
 ```toml
 # If the page was not updated by the username specified here, throw an error.
-# If this setting is omitted - auth.username is used for checks.
+# If this setting is omitted - username from auth section is used for checks.
 author = "author_username"
 
 [pages]
 [pages.default]
-# Space should be defined as abbreviation, otherwise 403 error would be generated
-page_space = "default space"
+# Space key. E.g. for space "local-dev" the space key is "LOC"
+# Space defined here will be used if a page section below does not specify it
+page_space = "DEFAULT_SPACE_KEY"
 [pages.page1]
-page_title = "Some page name"
-# The name of text file with page contents
+# The title of the page
+page_title = "Some page title"
+# The filename with page content
 page_file = "some_file.confluencewiki"
 # If specified - overrides the default page_space
-page_space = "some_space"
+page_space = "some_space_key"
 
 [pages.page2]
-page_title = "Some other page name"
+page_title = "Some other page title"
 page_file = "some_other_file.confluencewiki"
 
 [auth]
@@ -126,3 +114,9 @@ is_cloud = false
 # Contrib directory
 
 There are shell completions for bash and zsh as well as a sample of [git post-commit hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks).
+
+# See also
+
+* [Vim confluencewiki syntax](https://www.vim.org/scripts/script.php?script_id=1994)
+* [Paste confluence image in vim](https://github.com/SabbathHex/confluencewiki-img-paste.vim)
+* [Atlassian python API](https://atlassian-python-api.readthedocs.io/en/latest/) (On [Github](https://github.com/atlassian-api/atlassian-python-ap))
