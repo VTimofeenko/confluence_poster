@@ -12,6 +12,11 @@ class Page:
     page_space: Union[str, None]
     parent_page_title: Union[str, None]
 
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Page):
+            raise ValueError
+        return (self.page_title == other.page_title) and (self.page_space == other.page_space)
+
 
 @dataclass
 class Auth:

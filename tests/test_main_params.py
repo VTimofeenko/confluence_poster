@@ -83,7 +83,7 @@ def test_one_page_no_title_in_config(tmp_path):
     assert state.config.pages[0].page_title == page_title
 
 
-@pytest.mark.parametrize("param", ["debug", "force", "minor_edit"])
+@pytest.mark.parametrize("param", ["debug", "force", "minor_edit", "force_create"])
 def test_binary_parameter_in_state(param):
     """Checks that the binary parameters are reflected in state."""
     result = runner.invoke(app, [f'--{param.replace("_", "-")}', 'validate'])

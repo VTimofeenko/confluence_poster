@@ -22,9 +22,11 @@ def make_two_pages(tmp_path):
     return generate_local_config(tmp_path, pages=2)
 
 
-@pytest.mark.parametrize('with_report', [False, True])
-def test_post_multiple_pages(make_two_pages, with_report):
+@pytest.mark.parametrize("report", ["no report", "with report"])
+def test_post_multiple_pages(make_two_pages, report):
     """Checks that creation of two brand new pages in root of the space works fine"""
+
+    with_report = (report == "with report")
     config_file, config = make_two_pages
     result = run_with_config(config_file=config_file,
                              pre_args=['--report'] * with_report,

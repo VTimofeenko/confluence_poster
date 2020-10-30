@@ -76,8 +76,10 @@ def test_post_single_page_no_parent(make_one_page_config):
     assert "Finished processing pages" in result.stdout
 
 
-@pytest.mark.parametrize("with_report", [False, True])
-def test_not_create_if_refused(make_one_page_config, with_report):
+@pytest.mark.parametrize("report", ["no report", "with report"])
+def test_not_create_if_refused(make_one_page_config, report):
+    with_report = (report == "with report")
+
     config_file, config = make_one_page_config
     result = run_with_config(input="N\n",  # it should not be created
                              pre_args=['--report'] * with_report,
@@ -278,8 +280,22 @@ def test_force_create_page(make_one_page_config):
     """Tests the force_create flag."""
     config_file, config = make_one_page_config
     result = run_with_config(input="N\nY\n",  # do not look for parent, create in root
-                             other_args=['--force-create'],
+                             pre_args=['--force-create'],
                              config_file=config_file)
     assert result.exit_code == 0
     assert 'Should it be created?' not in result.stdout  # flag overwrites the prompt
     assert page_created(page_title=config.pages[0].page_title), "Page was supposed to be created"
+
+
+def test_refuse_to_create_with_parent(setup_page):
+    """Tests user's refusal to create the page when prompted for a parent page"""
+    parent_id, parent_page_title = setup_page
+    result, page_title = run_with_title(input=f"Y\n"  # create page
+                                              f"Y\n"  # look for parent
+                                              f"{parent_page_title}\n"  # title of the parent
+                                              f"N\n",  # no, do not create
+                                        config_file=real_confluence_config)
+    assert "Which page should the script look for?" in result.stdout
+    assert "URL is:" in result.stdout
+    assert "Proceed to create?" in result.stdout
+    assert not page_created(page_title)

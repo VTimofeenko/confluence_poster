@@ -29,6 +29,7 @@ class StateConfig:
     config: Union[None, Config] = None
     minor_edit: bool = False
     print_report: bool = False
+    force_create: bool = False
     created_pages: List[int] = field(default_factory=list)
 
 
@@ -59,16 +60,8 @@ class Report:
         return output
 
 
-app = typer.Typer()
-state = StateConfig()
-
-
-@app.command()
-def post_page(force_create: Optional[bool] = typer.Option(default=False, help="Disable prompts to create pages. "
-                                                                              "Script could still prompt for a "
-                                                                              "parent page.")):
-    """Posts the content of the pages."""
-    report = Report(confluence_instance=state.confluence_instance)
+def create_page(page: Page, confluence: Confluence) -> (bool, Union[int, None]):
+    """Handles user input for page creation. Returns True and page_id if the page is created."""
 
     def find_parent(_parent_name: str, space: str) -> Union[int, None]:
         """Helper function to locate the parent page. Returns page id. Returns None if page is not found"""
@@ -84,7 +77,66 @@ def post_page(force_create: Optional[bool] = typer.Option(default=False, help="D
             typer.echo(f"Parent page '{_parent_name}' not found")
             return None
 
+    # Page does not exist. Confluence API reports it itself
+    typer.echo(f"Page '{page.page_title}' not found")
+    parent_id = None
+    if state.force_create or typer.confirm("Should it be created?", default=True):
+        if not page.parent_page_title:
+            while typer.confirm(f"Should the script look for a parent in space {page.page_space}?"
+                                f" (N to be prompted to create the page in the space root)"):
+                parent_name = typer.prompt("Which page should the script look for?")
+                if parent_id := find_parent(parent_name, page.page_space):
+                    if typer.confirm(f"Proceed to create?"):
+                        break
+                    else:
+                        return False, None
+            else:
+                # If _parent_id stays None, page will be created in the root
+                if not typer.confirm(f"Create the page in the root of {page.page_space}? N will skip the page"):
+                    return False, None
+        else:
+            typer.echo(f"Creating under the specified parent page {page.parent_page_title}")
+            parent_id = find_parent(page.parent_page_title, page.page_space)
+            if parent_id is None:
+                typer.echo(f"Parent page '{page.parent_page_title}' not found in space '{page.page_space}'. "
+                           f"Skipping page.")
+                return False, None
+
+        with open(page.page_file, 'r') as _:
+            typer.echo("Creating page")
+
+            response = confluence.create_page(space=page.page_space, title=page.page_title, body=_.read(),
+                                              parent_id=parent_id,
+                                              representation='wiki')
+            page_id = response['id']
+            typer.echo(f"Created page #{page_id} in space {page.page_space} called '{page.page_title}'")
+            return True, page_id
+    else:
+        return False, None
+
+
+app = typer.Typer()
+state = StateConfig()
+
+
+@app.command()
+def post_page(upload_files: Optional[List[Path]] = typer.Option(default=None,
+                                                                help="Files to upload as attachments to page.")):
+    """Posts the content of the pages."""
+    report = Report(confluence_instance=state.confluence_instance)
     confluence = state.confluence_instance
+    target_page = state.config.pages[0]
+
+    if upload_files:
+        if len(state.config.pages) > 1:
+            typer.echo('Upload files are specified, but there are more than 1 pages in the config.')
+            if typer.confirm(f"Continue by attaching all files to the first page, '{target_page.page_title}'?",
+                             default=False):
+                pass
+            else:
+                typer.echo("Aborting.")
+                raise typer.Exit(1)
+
     for page in state.config.pages:
         typer.echo(f"Looking for page '{page.page_title}'")
         if page_id := confluence.get_page_id(space=page.page_space, title=page.page_title):
@@ -108,41 +160,24 @@ def post_page(force_create: Optional[bool] = typer.Option(default=False, help="D
                                                 representation='wiki', minor_edit=state.minor_edit)
                 report.updated_pages += [page]
         else:
-            # Page does not exist. Confluence API reports it itself
-            typer.echo(f"Page '{page.page_title}' not found")
-            parent_id = None
-            if force_create or typer.confirm("Should it be created?", default=True):
-                if not page.parent_page_title:
-                    while typer.confirm(f"Should the script look for a parent in space {page.page_space}?"
-                                        f" (N to be prompted to create the page in the space root)"):
-                        parent_name = typer.prompt("Which page should the script look for?")
-                        if parent_id := find_parent(parent_name, page.page_space):
-                            if typer.confirm(f"Proceed to create?"):
-                                break
-                    else:
-                        # If _parent_id stays None, page will be created in the root
-                        if not typer.confirm(f"Create the page in the root of {page.page_space}? N will skip the page"):
-                            continue
-                else:
-                    typer.echo(f"Creating under the specified parent page {page.parent_page_title}")
-                    parent_id = find_parent(page.parent_page_title, page.page_space)
-                    if parent_id is None:
-                        typer.echo(f"Parent page '{page.parent_page_title}' not found in space '{page.page_space}'. "
-                                   f"Skipping page.")
-                        continue
-
-                with open(page.page_file, 'r') as _:
-                    typer.echo("Creating page")
-
-                    response = confluence.create_page(space=page.page_space, title=page.page_title, body=_.read(),
-                                                      parent_id=parent_id,
-                                                      representation='wiki')
-                    report.created_pages += [page]
-                    page_id = response['id']
-                    typer.echo(f"Created page #{page_id} in space {page.page_space} called '{page.page_title}'")
+            page_was_created, page_id = create_page(page=page, confluence=confluence)
+            if page_was_created:
+                report.created_pages += [page]
             else:
                 typer.echo(f"Not creating page '{page.page_title}'")
                 report.unprocessed_pages += [(page, "User cancelled creation when prompted")]
+
+        if page_id and upload_files:
+            typer.echo("Uploading the files")
+            if page == target_page:
+                for path in upload_files:
+                    if path.is_file():
+                        typer.echo(f"\tUploading file {path.name}")
+                        state.confluence_instance.attach_file(str(path),
+                                                              name=path.name,
+                                                              page_id=page_id)
+                        typer.echo(f"\tSubmitted file {path.name}")
+                typer.echo("Done uploading files")
 
     typer.echo("Finished processing pages")
 
@@ -174,35 +209,6 @@ def validate(online: Optional[bool] = typer.Option(False,
             typer.echo(f"Got space id #{space_id}.")
     typer.echo("Validation successful")
     return
-
-
-@app.command()
-def upload_files(files: List[Path] = typer.Argument(..., help="Files to upload.")):
-    """Uploads the provided files."""
-    target_page = state.config.pages[0]
-    if len(state.config.pages) > 1:
-        typer.echo('Upload files are provided, but there are more than 1 pages in the config.')
-        if typer.confirm(f"Continue by attaching all files to the first page, '{target_page.page_title}'?",
-                         default=False):
-            pass
-        else:
-            typer.echo("Aborting.")
-            raise typer.Exit(1)
-
-    if page_id := state.confluence_instance.get_page_id(space=target_page.page_space,
-                                                        title=target_page.page_title):
-        typer.echo("Uploading the files")
-        for path in files:
-            if path.is_file():
-                typer.echo(f"\tUploading file {path.name}")
-                state.confluence_instance.attach_file(str(path),
-                                                      name=path.name,
-                                                      page_id=page_id)
-                typer.echo(f"\tSubmitted file {path.name}")
-        typer.echo("Done uploading files")
-    else:
-        typer.echo(f"Could not find page '{target_page.page_title}'. Aborting")
-        raise typer.Exit(1)
 
 
 @app.callback()
@@ -257,6 +263,7 @@ def main(config: Path = typer.Option(default="config.toml",
         state.debug = False
 
     state.force = force
+    state.force_create = force_create
     state.print_report = report
 
     typer.echo("Reading config")

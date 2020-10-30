@@ -8,7 +8,7 @@ from functools import partial
 pytestmark = pytest.mark.online
 
 runner = CliRunner()
-default_run_cmd = generate_run_cmd(runner=runner, app=app, default_args=['upload-files'])
+default_run_cmd = generate_run_cmd(runner=runner, app=app, default_args=['post-page', '--upload-files'])
 upload_files = partial(run_with_config, default_run_cmd=partial(default_run_cmd))
 
 
@@ -57,8 +57,7 @@ def test_upload_files_single_page_does_not_exist(tmp_path, gen_attachments):
     config_file, config = generate_local_config(tmp_path=tmp_path)
     assert not page_created(config.pages[0].page_title), "Page was created when it should not had been"
     result: Result = upload_files(config_file=config_file, other_args=[file_to_upload])
-    assert result.exit_code == 1
-    assert "Could not find page" in result.stdout
+    assert result.exit_code == 0
 
 
 def test_upload_files_single_page_title_supplied(setup_page, gen_attachments):

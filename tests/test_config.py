@@ -11,7 +11,7 @@ def test_repo_sample_config():
     """General wellness test. The default config from repo should always work."""
     _ = Config("config.toml")
     # Just some random checks
-    assert _.pages[0].page_title == "Some page name"
+    assert _.pages[0].page_title == "Some page title"
     assert len(_.pages) == 2
     assert _.author == "author_username"
 
@@ -63,12 +63,12 @@ def test_default_space(tmp_path):
     config_file = mk_tmp_file(tmp_path, key_to_pop="pages.page1.page_space",
                               key_to_update="pages.page2", value_to_update={'page_title': 'Page2',
                                                                             'page_file': '',
-                                                                            'page_space': 'some_space'})
+                                                                            'page_space': 'some_space_key'})
     _ = Config(config_file)
     # check if the default value was applied for page without full definition
-    assert _.pages[0].page_space == "default space"
+    assert _.pages[0].page_space == "DEFAULT_SPACE_KEY"
     # make sure the fully defined page definition is not overwritten
-    assert _.pages[1].page_space == "some_space"
+    assert _.pages[1].page_space == "some_space_key"
 
 
 def test_default_space_multiple_pages_default(tmp_path):
@@ -78,7 +78,7 @@ def test_default_space_multiple_pages_default(tmp_path):
                                                                             'page_file': ''})
     _ = Config(config_file)
     for page in _.pages:
-        assert page.page_space == "default space"
+        assert page.page_space == "DEFAULT_SPACE_KEY"
 
 
 def test_no_default_space(tmp_path):
@@ -177,3 +177,22 @@ def test_page_parent_specified(tmp_path):
                               key_to_update="pages.page1.page_parent_title", value_to_update=parent_title)
     config = Config(config_file)
     assert config.pages[0].parent_page_title == parent_title
+
+
+@pytest.mark.parametrize(
+    "page_1_title,page_1_space,page_2_title,page_2_space,result",
+    [("A", "A", "A", "A", "equal"),
+     ("A", "B", "B", "B", "not equal"),
+     ("A", "A", "B", "B", "not equal"),
+     ("A", "A", "A", "B", "not equal"),
+     ]
+)
+def test_pages_equal(page_1_title, page_1_space, page_2_title, page_2_space, result):
+    page_1 = Page(page_title=page_1_title, page_space=page_1_space, page_file="A", parent_page_title=None)
+    page_2 = Page(page_title=page_2_title, page_space=page_2_space, page_file="A", parent_page_title=None)
+    assert (page_1 == page_2) == (result == "equal")
+
+
+def test_compare_page_to_not_page():
+    with pytest.raises(ValueError):
+        assert Page("Title", "File", "Space", None) == 1
