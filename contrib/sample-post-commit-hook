@@ -10,9 +10,9 @@ changed_files = check_output(['git', 'log',
 changed_docs = [_ for _ in changed_files if _.endswith('docx')]
 print(changed_files)
 
-base_post_cmd = 'confluence_poster --password <API_TOKEN>'
+base_post_cmd = 'confluence_poster --password <API_TOKEN> post-page '
 if changed_docs:
-    confluence_post_cmd = base_post_cmd + '--upload_files ' + ' '.join(changed_docs)
+    confluence_post_cmd = base_post_cmd + ' --upload_files ' + ' '.join(changed_docs)
 elif 'page.confluencewiki' in changed_files:
     confluence_post_cmd = base_post_cmd
 else:
