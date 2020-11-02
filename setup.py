@@ -1,14 +1,15 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='confluence_poster',
     version='1.0',
-    packages=['confluence_poster'],
     url='https://github.com/SabbathHex/confluence_poster',
     license='MIT',
     author='SabbathHex',
-    author_email='',
+    author_email='',  # TODO maintainer
     include_package_data=True,
+    packages=find_packages(),
+    package_dir={'confluence_poster': 'confluence_poster'},
     entry_points={"console_scripts": ["confluence_poster = confluence_poster.main:app"]},
     install_requires=[
         "atlassian-python-api>=1.17.6",
