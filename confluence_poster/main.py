@@ -8,7 +8,7 @@ from atlassian.errors import ApiError
 from dataclasses import dataclass, field
 from requests.exceptions import ConnectionError
 
-__version__ = '1.0.0'
+__version__ = '1.1.0'
 
 
 def version_callback(value: bool):

@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='confluence_poster',
-    version='1.0.0',
+    version='1.1.0',
     url='https://github.com/SabbathHex/confluence_poster',
     license='MIT',
     author='Vladimir Timofeenko',
