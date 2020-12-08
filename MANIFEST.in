@@ -1,2 +1,2 @@
-include README.md
-include config.toml
+global-include README.md
+global-include config.toml
