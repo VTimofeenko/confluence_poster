@@ -6,7 +6,7 @@ setup(
     url='https://github.com/SabbathHex/confluence_poster',
     license='MIT',
     author='Vladimir Timofeenko',
-    author_email='maintain@vtimofeenko.com',
+    author_email='confluence.poster.maintain@vtimofeenko.com',
     include_package_data=True,
     package_data={'confluence_poster': ['config.toml']},
     packages=find_packages(exclude=("tests", "docs")),
