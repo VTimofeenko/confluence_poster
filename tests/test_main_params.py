@@ -100,3 +100,10 @@ def test_cloud_api(tmp_path):
     result = runner.invoke(app, ['--config', str(not_cloud_config), '--force', 'validate'])
     assert result.exit_code == 0
     assert state.confluence_instance.api_version == "cloud"
+
+
+def test_show_version():
+    """Checks that --version flag works"""
+    result = runner.invoke(app, ['--version'])
+    assert result.exit_code == 0
+    assert 'Confluence poster version' in result.stdout

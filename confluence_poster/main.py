@@ -8,6 +8,14 @@ from atlassian.errors import ApiError
 from dataclasses import dataclass, field
 from requests.exceptions import ConnectionError
 
+__version__ = '1.0.0'
+
+
+def version_callback(value: bool):
+    if value:
+        typer.echo(f"Confluence poster version: {__version__}")
+        raise typer.Exit()
+
 
 def get_page_url(page_title: str, space: str, confluence: Confluence) -> Union[str, None]:
     """Retrieves page URL"""
@@ -212,7 +220,11 @@ def validate(online: Optional[bool] = typer.Option(False,
 
 
 @app.callback()
-def main(config: Path = typer.Option(default="config.toml",
+def main(version: Optional[bool] = typer.Option(None,
+                                                "--version",
+                                                help="Show version and exit",
+                                                callback=version_callback),
+         config: Path = typer.Option(default="config.toml",
                                      help="The file containing configuration. "
                                           "If not specified - config.toml from the same directory is used"),
          page_title: Optional[str] = typer.Option(None, help="Override page title from config."
