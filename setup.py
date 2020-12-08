@@ -8,6 +8,7 @@ setup(
     author='Vladimir Timofeenko',
     author_email='maintain@vtimofeenko.com',
     include_package_data=True,
+    package_data={'': ['config.toml']},
     packages=find_packages(exclude=("tests", "docs")),
     package_dir={'confluence_poster': 'confluence_poster'},
     entry_points={"console_scripts": ["confluence_poster = confluence_poster.main:app"]},
