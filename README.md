@@ -68,7 +68,7 @@ $ confluence_poster validate [OPTIONS]
 Currently the project is installable through
 
 ```console
-$ pip install TODO
+$ pip install confluence-poster
 ```
 
 # Config format
