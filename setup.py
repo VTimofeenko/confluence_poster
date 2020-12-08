@@ -2,13 +2,13 @@ from setuptools import setup, find_packages
 
 setup(
     name='confluence_poster',
-    version='1.0',
+    version='1.0.0',
     url='https://github.com/SabbathHex/confluence_poster',
     license='MIT',
-    author='SabbathHex',
-    author_email='',  # TODO maintainer
+    author='Vladimir Timofeenko',
+    author_email='maintain@vtimofeenko.com',
     include_package_data=True,
-    packages=find_packages(),
+    packages=find_packages(exclude=("tests", "docs")),
     package_dir={'confluence_poster': 'confluence_poster'},
     entry_points={"console_scripts": ["confluence_poster = confluence_poster.main:app"]},
     install_requires=[
@@ -18,6 +18,7 @@ setup(
         "requests"
     ],
     long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
     tests_require=[
         "pytest",
         "pytest-cov",
