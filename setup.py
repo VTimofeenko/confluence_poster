@@ -16,7 +16,8 @@ setup(
         "atlassian-python-api>=1.17.6",
         "typer>=0.3.2",
         "toml",
-        "requests"
+        "requests",
+        "xdg"
     ],
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
