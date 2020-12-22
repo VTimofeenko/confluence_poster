@@ -1,4 +1,4 @@
-from confluence_poster.poster_config import Config, Page
+from confluence_poster.poster_config import Config, Page, PartialConfig
 from dataclasses import fields
 from utils import mk_tmp_file
 import toml
@@ -196,3 +196,10 @@ def test_pages_equal(page_1_title, page_1_space, page_2_title, page_2_space, res
 def test_compare_page_to_not_page():
     with pytest.raises(ValueError):
         assert Page("Title", "File", "Space", None) == 1
+
+
+@pytest.mark.parametrize('file,data', [(None, None), ("/tmp/file", {'a': 'b'})])
+def test_broken_partial_config(file, data):
+    """Checks that partial config complains about source for its data"""
+    with pytest.raises(ValueError):
+        _ = PartialConfig(file=file, data=data)

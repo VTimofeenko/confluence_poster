@@ -1,8 +1,10 @@
 import toml
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Union
 from operator import attrgetter
 from itertools import groupby
+from collections import UserDict
 
 
 @dataclass
@@ -26,11 +28,35 @@ class Auth:
     is_cloud: bool = False
 
 
-class Config(object):
-    """Class that loads the config file and provides interface to its values"""
-    def __init__(self, file: str):
-        _ = toml.load(file)
+class PartialConfig(UserDict):
+    """A class that allows reading file contents or data from a dictionary"""
+    def __init__(self,
+                 file: Union[str, Path, None] = None,
+                 data: Union[dict, None] = None):
+        if file is None and data is None:
+            raise ValueError("No data provided")
 
+        if file is not None and data is not None:
+            raise ValueError("Both file and data were provided, cannot determine preference")
+
+        if data is not None:
+            _data = data
+        else:
+            _data = toml.load(file)
+
+        super(PartialConfig, self).__init__(_data)
+
+
+class Config(PartialConfig):
+    """Class that loads the config file and provides interface to its values"""
+    def __init__(self,
+                 file: Union[str, Path, None] = None,
+                 data: Union[dict, None] = None):
+        """File: file to read config from
+        is_global: allows suppressing checks to implement config inheritance"""
+        super(Config, self).__init__(file, data)
+
+        _ = self.data
         self.pages = _["pages"]
         self.auth = _["auth"]
         self.author = _.get("author", None)
