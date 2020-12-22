@@ -60,8 +60,13 @@ def test_util_merge():
     assert dict(merge_configs({'a': 'b'}, {'c': 'd'})) == {'a': 'b', 'c': 'd'}
     assert dict(merge_configs({'auth': {'user': 'a'}}, {'auth': {'password': 'b'}})) == \
            {'auth': {'user': 'a', 'password': 'b'}}
+    assert dict(merge_configs({'auth': {'password': 'a'}}, {'auth': {'password': 'b'}})) == \
+           {'auth': {'password': 'b'}}
+
     with pytest.raises(ValueError):
         dict(merge_configs({'a': {'b': 'c'}}, {'a': 'd'}))
+    with pytest.raises(ValueError):
+        dict(merge_configs({'a': {'b': 'c'}}, {'a': {'b': 1}}))
 
 
 def test_no_configs_except_local(monkeypatch):

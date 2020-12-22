@@ -10,10 +10,16 @@ def merge_configs(first_config: Mapping, other_config: Mapping):
     {'auth': {'user': 'a'}} + {'auth': {'password': 'b'}} = {'auth': {'user': 'a', 'password': 'b'}}"""
     for key in set(first_config).union(other_config):
         if key in first_config and key in other_config:
-            if all([isinstance(_, dict) for _ in [first_config[key], other_config[key]]]):
+            check_list = [isinstance(_, dict) for _ in [first_config[key], other_config[key]]]
+            if all(check_list):
                 yield key, dict(merge_configs(first_config[key], other_config[key]))
+            elif isinstance(first_config[key], type(other_config[key])):
+                yield key, other_config[key]
+            elif check_list.count(True) == 1:  # one and only one is a dict
+                raise ValueError(f"{key} is a section in one of the configs, not in another")
             else:
                 raise ValueError(f"{key} key is malformed in one of the configs")
+
         elif key in first_config:
             yield key, first_config[key]
         else:
