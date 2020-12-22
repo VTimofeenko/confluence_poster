@@ -31,9 +31,10 @@ def load_config(local_config: Path) -> Config:
     Reads configs from XDG_CONFIG_DIRS, then from XGD_CONFIG_HOME, then the local one - either the default one, or
     supplied through command line."""
     final_config = UserDict()
-    for path in xdg_config_dirs() + [xdg_config_home()]:
-        if path.exists():
-            final_config = dict(merge_configs(final_config, PartialConfig(file=path/"confluence_poster/config.toml")))
+    for path in xdg_config_dirs()[:-1] + [xdg_config_home()]:
+        config_path = path / "confluence_poster/config.toml"
+        if config_path.exists():
+            final_config = dict(merge_configs(final_config, PartialConfig(file=config_path)))
 
     final_config = dict(merge_configs(final_config, PartialConfig(file=local_config)))
 
