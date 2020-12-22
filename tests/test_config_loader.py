@@ -1,4 +1,4 @@
-from confluence_poster.poster_config import Config, PartialConfig
+from confluence_poster.poster_config import Config
 import toml
 from confluence_poster.config_loader import load_config, merge_configs
 from utils import mk_tmp_file
@@ -20,20 +20,29 @@ def setup_xdg_dirs(tmp_path):
     return str(my_xdg_config_dirs), str(my_xdg_config_home)
 
 
-def test_config_construct(tmp_path, setup_xdg_dirs, monkeypatch):
-    """Creates all XDG_CONFIG_ dirs for the test and checks that relevant keys are constructed, without override"""
+@pytest.mark.parametrize('dir_undefined', [None, 'home', 'dirs'])
+def test_config_construct(tmp_path, setup_xdg_dirs, monkeypatch, dir_undefined):
+    """Creates all XDG_CONFIG_ dirs for the test and checks that relevant keys are constructed"""
     my_xdg_config_dirs, my_xdg_config_home = setup_xdg_dirs
     global_config = Path(f"{my_xdg_config_dirs}/confluence_poster/config.toml")
     home_config = Path(f"{my_xdg_config_home}/confluence_poster/config.toml")
     repo_config = toml.load('config.toml')
 
     # Strip repo config into parts
-    global_config_part = {key: repo_config['auth'][key] for key in repo_config['auth'].keys()
-                          & {'confluence_url', 'is_cloud'}}
+    if dir_undefined == 'home':
+        global_config_part = {key: repo_config['auth'][key] for key in repo_config['auth'].keys()}
+        my_xdg_config_home = None
+    else:
+        global_config_part = {key: repo_config['auth'][key] for key in repo_config['auth'].keys()
+                              & {'confluence_url', 'is_cloud'}}
     global_config.write_text(toml.dumps({'auth': global_config_part}))
 
-    home_config_part = {key: repo_config['auth'][key] for key in repo_config['auth'].keys()
-                        & {'username', 'password'}}
+    if dir_undefined == 'dirs':
+        home_config_part = {key: repo_config['auth'][key] for key in repo_config['auth'].keys()}
+        my_xdg_config_dirs = None
+    else:
+        home_config_part = {key: repo_config['auth'][key] for key in repo_config['auth'].keys()
+                            & {'username', 'password'}}
     home_config.write_text(toml.dumps({'auth': home_config_part}))
 
     # Set up dirs and files for test
@@ -55,13 +64,10 @@ def test_util_merge():
         dict(merge_configs({'a': {'b': 'c'}}, {'a': 'd'}))
 
 
-def test_config_no_xdg_config_home(tmp_path):
-    """Checks that configs work if xdg_home is not overridden"""
-
-
-def test_config_no_xdg_config_dirs(tmp_path):
-    pass
-
-
-def test_no_configs_except_local(tmp_path):
+def test_no_configs_except_local(monkeypatch):
     """Checks that the script works if only the local config exists"""
+    monkeypatch.setenv('XDG_CONFIG_HOME', None)
+    monkeypatch.setenv('XDG_CONFIG_DIRS', None)
+    _ = load_config(Path('config.toml'))
+    repo_config = Config('config.toml')
+    assert repo_config == _

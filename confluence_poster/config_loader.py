@@ -26,7 +26,8 @@ def load_config(local_config: Path) -> Config:
     supplied through command line."""
     final_config = UserDict()
     for path in xdg_config_dirs() + [xdg_config_home()]:
-        final_config = dict(merge_configs(final_config, PartialConfig(file=path/"confluence_poster/config.toml")))
+        if path.exists():
+            final_config = dict(merge_configs(final_config, PartialConfig(file=path/"confluence_poster/config.toml")))
 
     final_config = dict(merge_configs(final_config, PartialConfig(file=local_config)))
 
