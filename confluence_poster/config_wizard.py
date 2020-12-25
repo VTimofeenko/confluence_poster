@@ -81,8 +81,7 @@ def config_dialog(filename: Union[Path, str], attributes: List[str]) -> Union[No
         typer.echo(f"File {filename} already exists.")
         typer.echo("Current content:")
         typer.echo((content := filename.read_text()))
-        if not (prompt_overwrite := typer.confirm(f"File {filename} exists. Overwrite?",
-                                                  default=False)):
+        if not typer.confirm(f"File {filename} exists. Overwrite?", default=False):
             return  # do not save this config file
 
         new_config = parse(content)
@@ -91,13 +90,14 @@ def config_dialog(filename: Union[Path, str], attributes: List[str]) -> Union[No
 
     # Process attributes list
     for attr in attributes:
-        default_value = _get_attribute_by_path(attr, new_config)
+        current_value = _get_attribute_by_path(attr, new_config)
         message = f"Please provide a value for {attr}"
-        if default_value is not None:
-            if not prompt_overwrite:
+        if current_value is not None:
+            if not typer.confirm(f"Would you like to overwrite current value of {attr}: {current_value}?",
+                                 default=True):
                 continue  # next attribute
-            message += f". Current value is: {default_value}. Hit [Enter] to use the current value."
-            new_value = typer.prompt(text=message, default=default_value)
+            message += f". Current value is: {current_value}. Hit [Enter] to use the current value."
+            new_value = typer.prompt(text=message, default=current_value)
         else:
             new_value = typer.prompt(text=message)
 

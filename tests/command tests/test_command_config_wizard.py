@@ -5,6 +5,9 @@ from typer.testing import CliRunner
 from tomlkit import parse
 import pytest
 from typing import List
+from itertools import product
+# noinspection PyProtectedMember
+from confluence_poster.config_wizard import _get_attribute_by_path as get_attribute_by_path
 
 pytestmark = pytest.mark.online
 
@@ -67,38 +70,97 @@ def test_dialog_converts_filename_to_path(tmp_path, monkeypatch):
         assert Path(tested_type).exists()
 
 
-# The underlying function is fully tested in unit tests, just need to test the UI wrapper around it
-@pytest.mark.parametrize('user_agrees_to_overwrite,mode', [(True, 'update'), (True, 'insert'), (False, 'insert')],
-                         ids=["User updates a key in existing config",
-                              "User adds a key to existing config",
-                              "User decides not to overwrite the file"])
-def test_single_dialog_existing_file(mode, user_agrees_to_overwrite, tmp_path, monkeypatch):
+@pytest.fixture(scope='function')
+def prepare_config_file(tmp_path) -> (Path, str):
     config: Path = tmp_path / 'config.toml'
     config_text = """update_node = 'original_value'
-    
+
     [parent]
     parent_update_node = 'parent_original_value'"""
     config.write_text(config_text)
+    return config, config_text
+
+
+# The underlying function is fully tested in unit tests, just need to test the UI wrapper around it
+@pytest.mark.parametrize('user_agrees_to_overwrite_file,mode',
+                         [(True, 'insert'),
+                          (False, None)],
+                         ids=["User adds a key to existing config",
+                              "User decides not to overwrite the file"])
+def test_single_dialog_existing_file_base(mode, user_agrees_to_overwrite_file,
+                                          prepare_config_file,
+                                          monkeypatch):
+    config, config_text = prepare_config_file
     new_value = 'new_value'
 
-    if user_agrees_to_overwrite:
+    if user_agrees_to_overwrite_file:
         user_input = ['Y', new_value, 'Y']
     else:
         user_input = ['N']
 
     setup_input(monkeypatch, user_input)
 
-    if user_agrees_to_overwrite:
-        if mode == 'update':
-            node_path = 'update_node'
-        else:
-            node_path = 'new_node'
+    if user_agrees_to_overwrite_file:
+        node_path = 'new_node'
         assert config_dialog(config, [node_path])
         assert parse(config.read_text())[node_path] == new_value, "Value was not set to the new one"
     else:
         assert config_dialog(config, ['update']) is None
         assert config.read_text() == config_text
-    # TODO: check the existing value with overwrite interaction
+
+
+@pytest.mark.parametrize('user_input', ['Y', 'N', ''],
+                         ids=["User agrees to update parameter",
+                              "User refuses to update parameter",
+                              "User accepts the default choice to update parameter"])
+def test_single_dialog_existing_file_one_update(user_input, prepare_config_file, monkeypatch):
+    """This test checks that key update in the config works:
+    * User input:
+        * 'n' -> no update
+        * 'y' -> update
+        * '' -> update
+    * If update happens - key is really updated
+    """
+    config, config_text = prepare_config_file
+    new_value = "new_value"
+    test_input = ['Y',  # overwrite file
+                  user_input,  # whether the value should be updated
+                  new_value,  # new value for the parameter
+                  "Y"  # save the file
+                  ]
+    setup_input(monkeypatch, test_input)
+
+    assert config_dialog(config, ['update_node'])
+    if user_input in ['Y', '']:
+        assert parse(config.read_text())['update_node'] == new_value, "Existing value was not updated"
+    else:
+        assert config.read_text() == config_text
+
+
+@pytest.mark.parametrize('user_updates_values', product([True, False], repeat=2),
+                         ids=lambda tup: f'User does {tup[0] * "not"} update the first attribute, '
+                                         f'does {tup[1] * "not"} update the second attribute')
+def test_single_dialog_existing_file_multiple_updates(user_updates_values, prepare_config_file, monkeypatch):
+    """In a scenario where there are more than 1 keys to update - make sure that permutations of user input are
+    handled correctly"""
+    new_value = 'new_value'
+    update_attrs = ['update_node', 'parent.parent_update_node']
+    answer_1, answer_2 = user_updates_values
+    config, config_text = prepare_config_file
+    test_input = ["Y"]
+    for user_answer in [answer_1, answer_2]:
+        if user_answer:
+            test_input += ['Y', new_value]
+        else:
+            test_input += ['N']
+    test_input += ['Y']
+    setup_input(monkeypatch, test_input)
+
+    assert config_dialog(config, update_attrs)
+    for user_answer, attr in zip([answer_1, answer_2], update_attrs):
+        # The value should be updated <=> user said yes
+        assert user_answer == (get_attribute_by_path(attribute_path=attr,
+                                                     config=parse(config.read_text())) == new_value)
 
 
 def test_user_input_first_question():
