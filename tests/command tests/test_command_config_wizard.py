@@ -40,7 +40,6 @@ def test_single_dialog_new_config(tmp_path, monkeypatch, save_agree):
     # Note: click provides validations for confirmation prompts, no need to test for garbage cli_input
     test_input = ["author name", 'https://confluence.local', 'page title', save_agree]
     setup_input(monkeypatch, test_input)
-    #monkeypatch.setattr('sys.stdin', io.StringIO("\n".join(test_input) + "\n"))
 
     # In this scenario file should be created when and only when the function returned true
     assert config_dialog(Path(path), ['author', 'auth.url', 'pages.page1.page_title']) == path.exists()
@@ -175,5 +174,3 @@ def test_user_input_first_question():
 def test_no_question_if_running_with_param():
     """Tests that if a parameter is supplied - the initial prompt is not asked"""
     pass
-
-

@@ -85,8 +85,6 @@ def config_dialog(filename: Union[Path, str], attributes: List[str]) -> Union[No
             return  # do not save this config file
 
         new_config = parse(content)
-    else:
-        prompt_overwrite = False
 
     # Process attributes list
     for attr in attributes:
@@ -113,6 +111,3 @@ def config_dialog(filename: Union[Path, str], attributes: List[str]) -> Union[No
         return True
     else:
         return False
-
-
-
