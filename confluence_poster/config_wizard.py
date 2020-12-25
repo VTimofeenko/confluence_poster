@@ -67,10 +67,6 @@ def _create_or_update_attribute(attribute: str, config: TOMLDocument, value: str
     return parse(dumps(_config))
 
 
-app = typer.Typer()
-
-
-@app.command()
 def config_dialog(filename: Union[Path, str], attributes: List[str]) -> Union[None, bool]:
     """Checks if filename exists and goes through the list of attributes asking the user for the values
     """
