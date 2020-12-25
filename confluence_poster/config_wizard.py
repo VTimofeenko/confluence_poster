@@ -54,7 +54,7 @@ def _create_or_update_attribute(attribute: str, config: TOMLDocument, value: str
     Returns a copy of config with updated value
     """
     *attribute_path, attribute_name = attribute.split('.')
-    _config = deepcopy(config)
+    _config = deepcopy(config)  # TODO: check if needed
     caret = _config
     for path_node in attribute_path:  # more clear than a reduce() call
         next_node = caret.get(path_node)
@@ -67,14 +67,20 @@ def _create_or_update_attribute(attribute: str, config: TOMLDocument, value: str
     return parse(dumps(_config))
 
 
-def config_dialog(filename: Path, attributes: List[str]) -> Union[None, bool]:
+app = typer.Typer()
+
+
+@app.command()
+def config_dialog(filename: Union[Path, str], attributes: List[str]) -> Union[None, bool]:
     """Checks if filename exists and goes through the list of attributes asking the user for the values
     """
+    if type(filename) is str:
+        filename = Path(filename)
     new_config = document()
-    if file_exists := filename.exists():
+    if filename.exists():
         typer.echo(f"File {filename} already exists.")
         typer.echo("Current content:")
-        print((content := filename.read_text()))
+        typer.echo((content := filename.read_text()))
         if not (prompt_overwrite := typer.confirm(f"File {filename} exists. Overwrite?",
                                                   default=False)):
             return  # do not save this config file
@@ -95,12 +101,12 @@ def config_dialog(filename: Path, attributes: List[str]) -> Union[None, bool]:
         else:
             new_value = typer.prompt(text=message)
 
-        _create_or_update_attribute(attribute=attr, config=new_config, value=new_value)
+        new_config = _create_or_update_attribute(attribute=attr, config=new_config, value=new_value)
 
     typer.echo(f"Config to be saved in {filename}:")
     typer.echo(message=dumps(new_config))
 
-    save = typer.prompt("Would you like to save it?", default=True)
+    save = typer.confirm("Would you like to save it?", default=True)
     if save:
         typer.echo(f"Saving config as {filename}")
         filename.write_text(dumps(new_config))
