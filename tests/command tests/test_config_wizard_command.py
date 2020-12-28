@@ -58,7 +58,7 @@ def test_no_params_initial_dialog(user_input, tmp_path, monkeypatch):
     assert ((tmp_path / f'cwd/{default_config_name}').exists()) == (len(user_input) > 1 and user_input[1] in {'Y', ''})
 
 
-def test_no_params_values_filled(tmp_path):
+def test_no_params_values_filled():
     """Goes through the wizard properly, checks that all values are filled"""
     _input = ("\n",
               "author",
