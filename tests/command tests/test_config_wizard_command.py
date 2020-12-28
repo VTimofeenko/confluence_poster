@@ -82,4 +82,19 @@ def test_no_params_values_filled():
     result: Result = runner.invoke(app, ['validate'])
     assert result.exit_code == 0
 
-# TODO: test absence of XDG_CONFIG_HOME
+
+@pytest.mark.parametrize('flag', ['--home-only', '--local-only'], ids=lambda flag: f"Tests f{flag} flag")
+def test_command_flags_no_configs(flag, tmp_path, monkeypatch):
+    """Tests --home-only and --local-only dialogs create only the corresponding files"""
+    import confluence_poster.config_wizard as _config_wizard
+    monkeypatch.setattr(_config_wizard, 'config_dialog', mock_config_dialog)
+
+    if flag == '--home-only':
+        _input = ()
+    else:
+        _input = (default_config_name, )
+
+    result: Result = default_run_cmd(input="\n".join(_input) + "\n", other_args=[flag])
+    assert result.exit_code == 0
+    assert ((tmp_path / 'home/confluence_poster/config.toml').exists()) == (flag == "--home-only")
+    assert ((tmp_path / f'cwd/{default_config_name}').exists()) == (flag == '--local-only')
