@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from requests.exceptions import ConnectionError
 
 __version__ = '1.1.0'
-default_config_name='config.toml'
+default_config_name = 'config.toml'
 
 
 def version_callback(value: bool):
@@ -274,15 +274,13 @@ def create_config(local_only: Optional[bool] = typer.Option(False,
     typer.echo("Creating config in local directory.")
     local_config_name = typer.prompt("Please provide the name of local config",
                                      type=str,
-                                     default='config.toml')  # TODO: make a constant to share with command flag
+                                     default=default_config_name)
 
     home_parameters = get_filled_attributes_from_file(home_config_location)
-    local_config_parameters = all_params - home_parameters
+    local_config_parameters = [_ for _ in all_params if _ not in home_parameters]
 
     config_dialog(filename=Path.cwd() / local_config_name,
                   attributes=local_config_parameters)
-
-
 
 
 @app.callback()
@@ -291,9 +289,9 @@ def main(ctx: typer.Context,
                                                 "--version",
                                                 help="Show version and exit",
                                                 callback=version_callback),
-         config: Path = typer.Option(default="config.toml",
+         config: Path = typer.Option(default=default_config_name,
                                      help="The file containing configuration. "
-                                          "If not specified - config.toml from the same directory is used"),
+                                          f"If not specified - {default_config_name} from the same directory is used"),
          page_title: Optional[str] = typer.Option(None, help="Override page title from config."
                                                              " Applicable if there is only one page."),
          parent_page_title: Optional[str] = typer.Option(None, help="Provide a parent title to search for."
@@ -326,8 +324,8 @@ def main(ctx: typer.Context,
                                               show_default=False,
                                               help="Enable debug logging. "
                                                    "Not enabled by default.")):
-    """ Supplementary script for writing confluence wiki articles in
-    vim. Uses information from config.toml to post thcallback=callbacke article content to confluence.
+    """Supplementary script for writing confluence wiki articles in
+    vim. Uses information from the config to post the article content to confluence.
     """
     typer.echo("Starting up confluence_poster")
     if debug:
