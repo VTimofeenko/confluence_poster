@@ -2,12 +2,12 @@ import typer
 from pathlib import Path
 from functools import reduce
 import toml
-from typing import List, Dict, Union, Any, Tuple
+from typing import List, Dict, Union, Any, Tuple, FrozenSet, Iterable
 from tomlkit import document, parse, table, dumps
 from tomlkit.parser import TOMLDocument
 from tomlkit.items import Table
 from dataclasses import dataclass
-from .poster_config import Auth, Page
+from confluence_poster.poster_config import Auth, Page
 from copy import deepcopy
 
 
@@ -67,7 +67,7 @@ def _create_or_update_attribute(attribute: str, config: TOMLDocument, value: str
     return parse(dumps(_config))
 
 
-def config_dialog(filename: Union[Path, str], attributes: List[str]) -> Union[None, bool]:
+def config_dialog(filename: Union[Path, str], attributes: Iterable[str]) -> Union[None, bool]:
     """Checks if filename exists and goes through the list of attributes asking the user for the values
     """
     if type(filename) is str:
@@ -107,3 +107,11 @@ def config_dialog(filename: Union[Path, str], attributes: List[str]) -> Union[No
         return True
     else:
         return False
+
+
+def get_filled_attributes_from_file(filename: Union[Path, str]) -> FrozenSet[str]:
+    if type(filename) is str:
+        filename = Path(filename)
+    if not filename.exists():
+        return frozenset()
+    return frozenset(_get_filled_attributes(parse(filename.read_text())))

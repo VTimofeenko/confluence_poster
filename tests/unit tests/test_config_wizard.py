@@ -1,10 +1,12 @@
 from tomlkit import dumps, parse
+from pathlib import Path
 # noinspection PyProtectedMember
 from confluence_poster.config_wizard import _create_or_update_attribute as create_update_attr
 # noinspection PyProtectedMember
 from confluence_poster.config_wizard import _get_attribute_by_path as get_attribute_by_path
 # noinspection PyProtectedMember
 from confluence_poster.config_wizard import _get_filled_attributes as get_filled_attributes
+from confluence_poster.config_wizard import get_filled_attributes_from_file
 import pytest
 from itertools import product
 
@@ -15,6 +17,13 @@ parent_foo = 'parent_bar'  # String
 [parent.child]
 child_foo = 'child_bar'"""
 source_config = parse(document)
+
+
+@pytest.fixture()
+def create_config_file(tmp_path) -> Path:
+    config = tmp_path / "config.toml"
+    config.write_text(document)
+    return config
 
 
 @pytest.mark.parametrize('path',
@@ -83,3 +92,20 @@ def test_get_filled_attributes():
     assert get_filled_attributes(source_config) == ('root_foo', 'control_value',
                                                     'parent.parent_foo',
                                                     'parent.child.child_foo')
+
+
+def test_get_filled_attributes_empty():
+    assert get_filled_attributes(parse("")) == ()
+
+
+def test_get_filled_attributes_from_file_param_conversion(create_config_file):
+    config = create_config_file
+    assert get_filled_attributes_from_file(config) == get_filled_attributes_from_file(str(config))
+    assert get_filled_attributes_from_file(config) == {'root_foo', 'control_value',
+                                                       'parent.parent_foo',
+                                                       'parent.child.child_foo'}
+
+
+def test_get_filled_attributes_from_file_non_existent_file(tmp_path):
+    """Ensures that empty file returns empty set of filled in params"""
+    assert get_filled_attributes_from_file(tmp_path / "does not exist") == frozenset([])

@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from requests.exceptions import ConnectionError
 
 __version__ = '1.1.0'
+default_config_name='config.toml'
 
 
 def version_callback(value: bool):
@@ -219,8 +220,74 @@ def validate(online: Optional[bool] = typer.Option(False,
     return
 
 
+@app.command()
+def create_config(local_only: Optional[bool] = typer.Option(False,
+                                                            "--local-only",
+                                                            help="Create config only in the local folder"),
+                  home_only: Optional[bool] = typer.Option(False,
+                                                           "--home-only",
+                                                           help="Create config only in the $XDG_CONFIG_HOME")):
+    import xdg
+    from confluence_poster.config_wizard import config_dialog, get_filled_attributes_from_file
+
+    home_config_location = xdg.xdg_config_home() / 'confluence_poster/config.toml'
+
+    all_params = frozenset()
+
+    # Initial prompt
+    typer.echo("Starting config wizard.")
+    typer.echo("This wizard will guide you through creating the configuration files.")
+    answer = ''
+    if not any([local_only, home_only]):
+        typer.echo("Since neither --local-only nor --home-only were specified, wizard will guide you through creating "
+                   f"configs in {xdg.xdg_config_home()} and {Path.cwd()}")
+
+        answer = typer.prompt(f"Create config in {xdg.xdg_config_home()}? [Y/n/q]"
+                              "\n* 'n' skips to config in the local directory"
+                              "\n* 'q' will exit the wizard\n",
+                              type=str,
+                              default='y').lower()
+
+        if answer == 'q':
+            raise typer.Exit()
+
+    if answer == 'y' and not local_only:
+        # Create config in home
+        config_dialog(filename=home_config_location,
+                      attributes=['author', 'auth.confluence_url', 'auth.username', 'auth.password'])
+        # TODO: password to hidden input
+        # TODO: handle returns of config_dialog
+    elif home_only:
+        # If --home-only is specified - no need to create another one in local folder
+        typer.echo("--home-only specified, not attempting to create any more configs.")
+        raise typer.Exit()
+
+    if not local_only:
+        # If local-only is passed - no need to ask for confirmation of creating a local only config
+        local_answer = typer.confirm(f"Proceed to create config in {Path.cwd()}?",
+                                     default=True)
+        if not local_answer:
+            typer.echo("Exiting.")
+            raise typer.Exit()
+
+    # Create config in current working directory
+    typer.echo("Creating config in local directory.")
+    local_config_name = typer.prompt("Please provide the name of local config",
+                                     type=str,
+                                     default='config.toml')  # TODO: make a constant to share with command flag
+
+    home_parameters = get_filled_attributes_from_file(home_config_location)
+    local_config_parameters = all_params - home_parameters
+
+    config_dialog(filename=Path.cwd() / local_config_name,
+                  attributes=local_config_parameters)
+
+
+
+
 @app.callback()
-def main(version: Optional[bool] = typer.Option(None,
+def main(ctx: typer.Context,
+         version: Optional[bool] = typer.Option(None,
                                                 "--version",
                                                 help="Show version and exit",
                                                 callback=version_callback),
@@ -260,7 +327,7 @@ def main(version: Optional[bool] = typer.Option(None,
                                               help="Enable debug logging. "
                                                    "Not enabled by default.")):
     """ Supplementary script for writing confluence wiki articles in
-    vim. Uses information from config.toml to post the article content to confluence.
+    vim. Uses information from config.toml to post thcallback=callbacke article content to confluence.
     """
     typer.echo("Starting up confluence_poster")
     if debug:
@@ -274,42 +341,44 @@ def main(version: Optional[bool] = typer.Option(None,
     else:
         state.debug = False
 
-    state.force = force
-    state.force_create = force_create
-    state.print_report = report
+    if ctx.invoked_subcommand != 'create-config':  # no need to validate or load the config if we're loading it
+        state.force = force
+        state.force_create = force_create
+        state.print_report = report
+        state.minor_edit = minor_edit
 
-    typer.echo("Reading config")
-    confluence_config = Config(str(config))
-    state.config = confluence_config
+        typer.echo("Reading config")
+        confluence_config = Config(str(config))
+        state.config = confluence_config
 
-    state.minor_edit = minor_edit
+        # Check that the parameters are not used with more than 1 page in the config
+        if page_title or parent_page_title:
+            if len(confluence_config.pages) > 1:
+                typer.echo("Page title specified as a parameter but there are more than 1 page in the config. Aborting.")
+                raise typer.Exit(1)
+            if page_title:
+                state.config.pages[0].page_title = page_title
+            if parent_page_title:
+                state.config.pages[0].parent_page_title = parent_page_title
 
-    # Check that the parameters are not used with more than 1 page in the config
-    if page_title or parent_page_title:
-        if len(confluence_config.pages) > 1:
-            typer.echo("Page title specified as a parameter but there are more than 1 page in the config. Aborting.")
+        # Validate password
+        try:
+            _password = next(_ for _ in [password, confluence_config.auth.password] if _ is not None)
+        except StopIteration:
+            typer.echo("Password is not specified in environment, parameter or the config. Aborting")
             raise typer.Exit(1)
-        if page_title:
-            state.config.pages[0].page_title = page_title
-        if parent_page_title:
-            state.config.pages[0].parent_page_title = parent_page_title
 
-    # Validate password
-    try:
-        _password = next(_ for _ in [password, confluence_config.auth.password] if _ is not None)
-    except StopIteration:
-        typer.echo("Password is not specified in environment, parameter or the config. Aborting")
-        raise typer.Exit(1)
+        # set API version
+        if confluence_config.auth.is_cloud:
+            api_version = "cloud"
+        else:
+            api_version = "latest"
 
-    # set API version
-    if confluence_config.auth.is_cloud:
-        api_version = "cloud"
+        state.confluence_instance = Confluence(
+            url=confluence_config.auth.url,
+            username=confluence_config.auth.username,
+            password=_password,
+            api_version=api_version
+        )
     else:
-        api_version = "latest"
-
-    state.confluence_instance = Confluence(
-        url=confluence_config.auth.url,
-        username=confluence_config.auth.username,
-        password=_password,
-        api_version=api_version
-    )
+        typer.echo("Starting config wizard")
