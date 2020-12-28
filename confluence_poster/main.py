@@ -263,14 +263,18 @@ def create_config(local_only: Optional[bool] = typer.Option(False,
         if answer == 'q':
             raise typer.Exit()
 
-    if answer == 'y' and not local_only:
+    if (answer == 'y' and not local_only) or home_only:
         # Create config in home
-        config_dialog(filename=home_config_location,
-                      attributes=home_only_params)
+        while True:
+            dialog_result = config_dialog(filename=home_config_location, attributes=home_only_params)
+            if dialog_result is None or dialog_result:
+                # None means the user does not want to overwrite the file
+                break
+
         # TODO: password to hidden input
         # TODO: is_cloud boolean
-        # TODO: handle returns of config_dialog
-    elif home_only:
+
+    if home_only:
         # If --home-only is specified - no need to create another one in local folder
         typer.echo("--home-only specified, not attempting to create any more configs.")
         raise typer.Exit()
@@ -292,8 +296,14 @@ def create_config(local_only: Optional[bool] = typer.Option(False,
     home_parameters = get_filled_attributes_from_file(home_config_location)
     local_config_parameters = [_ for _ in all_params if _ not in home_parameters]
 
-    config_dialog(filename=Path.cwd() / local_config_name,
-                  attributes=local_config_parameters)
+    while True:
+        dialog_result = config_dialog(filename=Path.cwd() / local_config_name,
+                                      attributes=local_config_parameters)
+        if dialog_result is None or dialog_result:
+            # None means the user does not want to overwrite the file
+            break
+
+    typer.echo("Configuration wizard finished. Consider running the validate command to check the generated config")
 
 
 @app.callback()

@@ -30,6 +30,11 @@ def mock_config_dialog(filename, *args, **kwargs):
     return True
 
 
+def validate_config():
+    result: Result = runner.invoke(app, ['validate'])
+    assert result.exit_code == 0
+
+
 @pytest.mark.parametrize('user_input', [('Y', 'Y', default_config_name),
                                         ('Y', 'N'),
                                         ('N', 'Y', default_config_name),
@@ -79,8 +84,7 @@ def test_no_params_values_filled():
               )
     result: Result = default_run_cmd(input="\n".join(_input) + "\n")  # create in home
     assert result.exit_code == 0
-    result: Result = runner.invoke(app, ['validate'])
-    assert result.exit_code == 0
+    validate_config()
 
 
 @pytest.mark.parametrize('flag', ['--home-only', '--local-only'], ids=lambda flag: f"Tests f{flag} flag")
@@ -98,3 +102,27 @@ def test_command_flags_no_configs(flag, tmp_path, monkeypatch):
     assert result.exit_code == 0
     assert ((tmp_path / 'home/confluence_poster/config.toml').exists()) == (flag == "--home-only")
     assert ((tmp_path / f'cwd/{default_config_name}').exists()) == (flag == '--local-only')
+
+
+def test_prefilled_params(tmp_path):
+    """Pre-fills the home config and checks that the user is asked relevant params for local config"""
+    _home_config: Path = tmp_path / 'home/confluence_poster/config.toml'
+    home_config_text = "author = 'test user'"
+    _home_config.write_text(home_config_text)
+    _input = ('n',  # no, skip to local config
+              "y",  # create local config
+              "",  # accept default name for config
+              'http://confluence.local',
+              'admin',
+              'password',
+              "false",
+              "LOC",  # default space
+              "Some page title",
+              "page1.confluencewiki",
+              "LOC",  # page space
+              "Y"  # save the edit
+              )
+
+    result: Result = default_run_cmd(input="\n".join(_input) + "\n")
+    assert result.exit_code == 0
+    validate_config()
