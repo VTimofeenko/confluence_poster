@@ -22,6 +22,14 @@ def setup_env_dirs(tmp_path, monkeypatch):
     monkeypatch.chdir(cwd)
 
 
+# args and kwargs here suppress errors about extra arguments
+# noinspection PyUnusedLocal
+def mock_config_dialog(filename, *args, **kwargs):
+    """Mocks the config dialog run by just creating the file and returning True"""
+    Path(filename).touch()
+    return True
+
+
 @pytest.mark.parametrize('user_input', [('Y', 'Y', default_config_name),
                                         ('Y', 'N'),
                                         ('N', 'Y', default_config_name),
@@ -38,12 +46,6 @@ def setup_env_dirs(tmp_path, monkeypatch):
                               'User accepts default choice for local config name'])
 def test_no_params_initial_dialog(user_input, tmp_path, monkeypatch):
     """Tests the very first run of config wizard, assuming no files currently exist"""
-    # args and kwargs here suppress errors about extra arguments
-    # noinspection PyUnusedLocal
-    def mock_config_dialog(filename, *args, **kwargs):
-        """Mocks the config dialog run by just creating the file and returning True"""
-        Path(filename).touch()
-        return True
 
     import confluence_poster.config_wizard as _config_wizard
     monkeypatch.setattr(_config_wizard, 'config_dialog', mock_config_dialog)
