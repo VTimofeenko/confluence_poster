@@ -3,6 +3,7 @@ from typing import Optional, List, Union, Tuple
 from pathlib import Path
 from logging import basicConfig, DEBUG
 from confluence_poster.poster_config import Config, Page
+from confluence_poster.config_loader import load_config
 from atlassian import Confluence
 from atlassian.errors import ApiError
 from dataclasses import dataclass, field
@@ -232,7 +233,18 @@ def create_config(local_only: Optional[bool] = typer.Option(False,
 
     home_config_location = xdg.xdg_config_home() / 'confluence_poster/config.toml'
 
-    all_params = frozenset()
+    all_params = ('author',
+                  # pages:
+                  'pages.default.page_space',
+                  'pages.page1.page_title',
+                  'pages.page1.page_file',
+                  'pages.page1.page_space',
+                  # auth:
+                  'auth.confluence_url',
+                  'auth.username',
+                  'auth.password',
+                  'auth.is_cloud')
+    home_only_params = ('author', 'auth.confluence_url', 'auth.username', 'auth.password', 'auth.is_cloud')
 
     # Initial prompt
     typer.echo("Starting config wizard.")
@@ -254,8 +266,9 @@ def create_config(local_only: Optional[bool] = typer.Option(False,
     if answer == 'y' and not local_only:
         # Create config in home
         config_dialog(filename=home_config_location,
-                      attributes=['author', 'auth.confluence_url', 'auth.username', 'auth.password'])
+                      attributes=home_only_params)
         # TODO: password to hidden input
+        # TODO: is_cloud boolean
         # TODO: handle returns of config_dialog
     elif home_only:
         # If --home-only is specified - no need to create another one in local folder
@@ -346,13 +359,14 @@ def main(ctx: typer.Context,
         state.minor_edit = minor_edit
 
         typer.echo("Reading config")
-        confluence_config = Config(str(config))
+        confluence_config = load_config(config)
         state.config = confluence_config
 
         # Check that the parameters are not used with more than 1 page in the config
         if page_title or parent_page_title:
             if len(confluence_config.pages) > 1:
-                typer.echo("Page title specified as a parameter but there are more than 1 page in the config. Aborting.")
+                typer.echo("Page title specified as a parameter but there are more than 1 page in the config. "
+                           "Aborting.")
                 raise typer.Exit(1)
             if page_title:
                 state.config.pages[0].page_title = page_title
