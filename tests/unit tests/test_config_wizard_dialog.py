@@ -8,8 +8,9 @@ from typing import List
 from itertools import product
 # noinspection PyProtectedMember
 from confluence_poster.config_wizard import _get_attribute_by_path as get_attribute_by_path
+from confluence_poster.config_wizard import print_config_file
 
-pytestmark = pytest.mark.online
+pytestmark = pytest.mark.offline
 
 runner = CliRunner()
 
@@ -162,15 +163,10 @@ def test_single_dialog_existing_file_multiple_updates(user_updates_values, prepa
                                                      config=parse(config.read_text())) == new_value)
 
 
-def test_user_input_first_question():
-    """Checks:
-    * y is default
-    * y proceeds to create in xdg home
-    * n skips to local config
-    * q exits the wizard"""
-    pass
+def test_config_file_printing(prepare_config_file):
+    config, config_text = prepare_config_file
+    tested_path = "parent.parent_update_node"
 
-
-def test_no_question_if_running_with_param():
-    """Tests that if a parameter is supplied - the initial prompt is not asked"""
-    pass
+    assert print_config_file(config, []) == print_config_file(str(config), [])
+    original_value = get_attribute_by_path(tested_path, parse(config_text))
+    assert original_value not in print_config_file(config, [tested_path])

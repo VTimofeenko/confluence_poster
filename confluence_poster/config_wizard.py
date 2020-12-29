@@ -2,13 +2,84 @@ import typer
 from pathlib import Path
 from functools import reduce
 import toml
-from typing import List, Dict, Union, Any, Tuple, FrozenSet, Iterable
+from typing import List, Dict, Union, Any, Tuple, FrozenSet, Iterable, Callable
 from tomlkit import document, parse, table, dumps
 from tomlkit.parser import TOMLDocument
 from tomlkit.items import Table
 from dataclasses import dataclass
 from confluence_poster.poster_config import Auth, Page
 from copy import deepcopy
+from dataclasses import dataclass
+
+
+@dataclass
+class DialogParameter:
+    """This class serves as a wrapper around title(str) with extra parameters to be consumed by the dialog prompt"""
+    title: str
+    comment: Union[str, None] = None  # for passing a comment
+    type: Union[type, None] = None  # for passing type to input
+    required: bool = True
+    hide_input: bool = False
+
+    def __eq__(self, other):
+        """Method to help looking up members of this class when the dialog runs"""
+        if isinstance(other, DialogParameter):
+            return self.title == other.title
+        elif isinstance(other, str):
+            return self.title == other
+        else:
+            raise ValueError
+
+    def __hash__(self):
+        """To be used very carefully"""
+        return hash(self.title)
+
+    def __getattr__(self, item):
+        """To proxy """
+        def _missing(*args, **kwargs):
+            method = getattr(self.title, item)
+            return method(*args, **kwargs)
+
+        return _missing
+
+    def __str__(self):
+        return self.title
+
+
+def _dialog_prompt(parameter: Union[DialogParameter, str], default_value=None) -> Any:
+    """Provides a single prompt of the dialog.
+
+    Special case: if None is returned - then the user skipped this parameter"""
+    _default_value = default_value
+    if type(parameter) is not DialogParameter:
+        # For handling default case without special information
+        parameter = DialogParameter(title=parameter)
+
+    message = [f'Please provide a value for {parameter.title}.']
+    if parameter.comment is not None:
+        message += [f"Comment: {parameter.comment}"]
+    if not parameter.required:
+        message += ["This parameter is optional. Press [Enter] to skip it."]
+        if default_value is None:
+            _default_value = ''
+
+    if default_value is not None:
+        if not parameter.hide_input:
+            message += [f"Current value is {default_value}. Press [Enter] to use it."]
+        else:
+            message += [f'Current value is set, but input is hidden, indicating a sensitive field.',
+                        'Press [Enter] to reuse the current value.']
+
+    new_value = typer.prompt(text="\n".join(message),
+                             default=_default_value,
+                             type=parameter.type,
+                             hide_input=parameter.hide_input,
+                             show_default=not parameter.hide_input
+                             )
+    if not parameter.required and default_value is None and new_value == '':
+        new_value = None
+
+    return new_value
 
 
 def _get_attribute_by_path(attribute_path: str, config: TOMLDocument) -> Any:
@@ -54,7 +125,7 @@ def _create_or_update_attribute(attribute: str, config: TOMLDocument, value: str
     Returns a copy of config with updated value
     """
     *attribute_path, attribute_name = attribute.split('.')
-    _config = deepcopy(config)  # TODO: check if needed
+    _config = deepcopy(config)
     caret = _config
     for path_node in attribute_path:  # more clear than a reduce() call
         next_node = caret.get(path_node)
@@ -63,12 +134,33 @@ def _create_or_update_attribute(attribute: str, config: TOMLDocument, value: str
         caret = caret.get(path_node)
 
     caret[attribute_name] = value
-    # return _config  # TODO: ugly. Otherwise _config dictionary mutates into {'foz': 'baz'} state
     return parse(dumps(_config))
 
 
-def config_dialog(filename: Union[Path, str], attributes: Iterable[str]) -> Union[None, bool]:
+def print_config_file(filename: Union[Path, str], hidden_attributes: Iterable[Union[str, DialogParameter]]) -> str:
+    """Given a path on the filesystem and a list of hidden attributes, returns content of that file,
+    redacting the sensitive fields"""
+    if type(filename) is str:
+        filename = Path(filename)
+
+    config = parse(filename.read_text())
+    _config = deepcopy(config)
+    for attribute in hidden_attributes:
+        if _get_attribute_by_path(str(attribute), _config) is not None:
+            _config = _create_or_update_attribute(str(attribute), _config, value="[REDACTED]")
+
+    return dumps(_config)
+
+
+def config_dialog(filename: Union[Path, str],
+                  attributes: Iterable[Union[str, DialogParameter]],
+                  config_print_function: Callable = lambda file: file.read_text()) -> Union[None, bool]:
     """Checks if filename exists and goes through the list of attributes asking the user for the values
+
+    :param filename: filename (path or string) containing the config to be output
+    :param attributes: list of parameter paths or DialogParameters to be displayed
+    :param config_print_function: function that prints the config file.
+    Can be overridden using print_config_file function to preserve list of redacted attributes.
     """
     if type(filename) is str:
         filename = Path(filename)
@@ -76,26 +168,23 @@ def config_dialog(filename: Union[Path, str], attributes: Iterable[str]) -> Unio
     if filename.exists():
         typer.echo(f"File {filename} already exists.")
         typer.echo("Current content:")
-        typer.echo((content := filename.read_text()))
+        typer.echo(config_print_function(filename))
         if not typer.confirm(f"File {filename} exists. Overwrite?", default=False):
             return  # do not save this config file
 
-        new_config = parse(content)
+        new_config = parse(filename.read_text())
 
     # Process attributes list
     for attr in attributes:
         current_value = _get_attribute_by_path(attr, new_config)
-        message = f"Please provide a value for {attr}"
         if current_value is not None:
             if not typer.confirm(f"Would you like to overwrite current value of {attr}: {current_value}?",
                                  default=True):
                 continue  # next attribute
-            message += f". Current value is: {current_value}. Hit [Enter] to use the current value."
-            new_value = typer.prompt(text=message, default=current_value)
-        else:
-            new_value = typer.prompt(text=message)
+        new_value = _dialog_prompt(parameter=attr, default_value=current_value)
 
-        new_config = _create_or_update_attribute(attribute=attr, config=new_config, value=new_value)
+        if new_value is not None:
+            new_config = _create_or_update_attribute(attribute=attr, config=new_config, value=new_value)
 
     typer.echo(f"Config to be saved in {filename}:")
     typer.echo(message=dumps(new_config))

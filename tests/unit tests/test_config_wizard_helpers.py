@@ -1,4 +1,5 @@
 from tomlkit import dumps, parse
+import io
 from pathlib import Path
 # noinspection PyProtectedMember
 from confluence_poster.config_wizard import _create_or_update_attribute as create_update_attr
@@ -6,9 +7,13 @@ from confluence_poster.config_wizard import _create_or_update_attribute as creat
 from confluence_poster.config_wizard import _get_attribute_by_path as get_attribute_by_path
 # noinspection PyProtectedMember
 from confluence_poster.config_wizard import _get_filled_attributes as get_filled_attributes
+# noinspection PyProtectedMember
+from confluence_poster.config_wizard import _dialog_prompt, DialogParameter
 from confluence_poster.config_wizard import get_filled_attributes_from_file
 import pytest
 from itertools import product
+
+pytestmark = pytest.mark.offline
 
 document = """root_foo = 'root_bar'
 control_value = 'value'  # To make sure it's not touched
@@ -109,3 +114,60 @@ def test_get_filled_attributes_from_file_param_conversion(create_config_file):
 def test_get_filled_attributes_from_file_non_existent_file(tmp_path):
     """Ensures that empty file returns empty set of filled in params"""
     assert get_filled_attributes_from_file(tmp_path / "does not exist") == frozenset([])
+
+
+@pytest.mark.parametrize(
+    "parameter,default_value,_input,output",
+    [
+        ("name", None, "value", "value"),
+        (DialogParameter("title", comment="Some comment"), None, "value", "value"),
+        (DialogParameter("is_cloud", type=bool, comment="Whether this is a cloud instance of Confluence."), None,
+         "true", True),
+        (DialogParameter("is_cloud", type=bool, comment="Some comment"), True, "", True),
+        (DialogParameter("page_space", required=False), None, "", None),
+        (DialogParameter("page_space", required=False), "LOC", "", "LOC"),
+        (DialogParameter("password", hide_input=True), None, "my_password", "my_password"),
+        (DialogParameter("password", hide_input=True, required=False), None, "", None),
+        (DialogParameter("password", hide_input=True, required=False), "pwd", "", "pwd"),
+
+    ], ids=[
+        "Check str > output conversion",
+        "Check DialogParameter[str] with comment",
+        "Check DialogParameter[bool] with comment",
+        "Check DialogParameter[bool] with comment and default True value",
+        "Check optional DialogParameter[str]: skip the parameter",
+        "Check optional DialogParameter[str]: accept the default value",
+        "Check parameter with hidden input",
+        "Check optional parameter with hidden input and empty default: skip",
+        "Check optional parameter with hidden input and filled in default: accept default",
+    ])
+def test_single_dialog_prompt(monkeypatch, capsys, default_value, parameter, _input, output):
+    monkeypatch.setattr('sys.stdin', io.StringIO(_input + "\n"))
+    # Otherwise the coverage test fails
+    monkeypatch.setattr('getpass.getpass', lambda x: output)
+    assert _dialog_prompt(parameter=parameter, default_value=default_value) == output
+    captured = capsys.readouterr()
+
+    if isinstance(parameter, DialogParameter):
+        if parameter.comment is not None:
+            assert parameter.comment in captured.out, "Comment should be displayed in dialog prompt"
+        if parameter.hide_input and output is not None:
+            assert output not in captured.out
+
+
+def test_dialog_parameter_methods():
+    inner_string = "title"
+    d1 = DialogParameter(inner_string)
+    d2 = DialogParameter(inner_string)
+    d3 = DialogParameter(inner_string + "2")
+    assert d1 == d2
+    assert d1 != d3
+    assert d1 == inner_string
+    with pytest.raises(ValueError):
+        assert DialogParameter("title") == 5
+
+    assert d1 in [inner_string, d1, "Garbage"]
+    assert d1 in (inner_string, d1, "Garbage")
+
+    assert d1 in {"Garbage", inner_string}
+    assert str(d1) == inner_string

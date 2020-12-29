@@ -4,6 +4,7 @@ from pathlib import Path
 from logging import basicConfig, DEBUG
 from confluence_poster.poster_config import Config, Page
 from confluence_poster.config_loader import load_config
+from confluence_poster.config_wizard import DialogParameter
 from atlassian import Confluence
 from atlassian.errors import ApiError
 from dataclasses import dataclass, field
@@ -229,22 +230,26 @@ def create_config(local_only: Optional[bool] = typer.Option(False,
                                                            "--home-only",
                                                            help="Create config only in the $XDG_CONFIG_HOME")):
     import xdg
-    from confluence_poster.config_wizard import config_dialog, get_filled_attributes_from_file
+    from confluence_poster.config_wizard import config_dialog, get_filled_attributes_from_file, print_config_file
+    from functools import partial
 
     home_config_location = xdg.xdg_config_home() / 'confluence_poster/config.toml'
 
-    all_params = ('author',
+    all_params = (DialogParameter('author', required=False),
                   # pages:
-                  'pages.default.page_space',
-                  'pages.page1.page_title',
-                  'pages.page1.page_file',
-                  'pages.page1.page_space',
+                  DialogParameter('pages.default.page_space', required=False),
+                  DialogParameter('pages.page1.page_title'),
+                  DialogParameter('pages.page1.page_file'),
+                  DialogParameter('pages.page1.page_space', required=False),
                   # auth:
-                  'auth.confluence_url',
-                  'auth.username',
-                  'auth.password',
-                  'auth.is_cloud')
+                  DialogParameter('auth.confluence_url'),
+                  DialogParameter('auth.username'),
+                  DialogParameter('auth.password', required=False, hide_input=True),
+                  DialogParameter('auth.is_cloud', type=bool))
     home_only_params = ('author', 'auth.confluence_url', 'auth.username', 'auth.password', 'auth.is_cloud')
+    # To hide password in prompts
+    _print_config_file = partial(print_config_file, hidden_attributes=['auth.password'])
+    config_dialog = partial(config_dialog, config_print_function=_print_config_file)
 
     # Initial prompt
     typer.echo("Starting config wizard.")
@@ -266,13 +271,11 @@ def create_config(local_only: Optional[bool] = typer.Option(False,
     if (answer == 'y' and not local_only) or home_only:
         # Create config in home
         while True:
-            dialog_result = config_dialog(filename=home_config_location, attributes=home_only_params)
+            dialog_result = config_dialog(filename=home_config_location,
+                                          attributes=[_ for _ in all_params if _ in home_only_params])
             if dialog_result is None or dialog_result:
                 # None means the user does not want to overwrite the file
                 break
-
-        # TODO: password to hidden input
-        # TODO: is_cloud boolean
 
     if home_only:
         # If --home-only is specified - no need to create another one in local folder
