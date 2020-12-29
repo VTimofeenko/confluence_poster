@@ -154,23 +154,27 @@ def print_config_file(filename: Union[Path, str], hidden_attributes: Iterable[Un
 
 def config_dialog(filename: Union[Path, str],
                   attributes: Iterable[Union[str, DialogParameter]],
-                  config_print_function: Callable = lambda file: file.read_text()) -> Union[None, bool]:
+                  config_print_function: Callable = lambda file: file.read_text(),
+                  incremental: bool = False
+                  ) -> Union[None, bool]:
     """Checks if filename exists and goes through the list of attributes asking the user for the values
 
     :param filename: filename (path or string) containing the config to be output
     :param attributes: list of parameter paths or DialogParameters to be displayed
     :param config_print_function: function that prints the config file.
     Can be overridden using print_config_file function to preserve list of redacted attributes.
+    :param incremental: if set to True - suppresses the prompt to overwrite the file
     """
     if type(filename) is str:
         filename = Path(filename)
     new_config = document()
     if filename.exists():
         typer.echo(f"File {filename} already exists.")
-        typer.echo("Current content:")
-        typer.echo(config_print_function(filename))
-        if not typer.confirm(f"File {filename} exists. Overwrite?", default=False):
-            return  # do not save this config file
+        if not incremental:
+            typer.echo("Current content:")
+            typer.echo(config_print_function(filename))
+            if not typer.confirm(f"File {filename} exists. Overwrite?", default=False):
+                return  # do not save this config file
 
         new_config = parse(filename.read_text())
 
@@ -178,6 +182,8 @@ def config_dialog(filename: Union[Path, str],
     for attr in attributes:
         current_value = _get_attribute_by_path(attr, new_config)
         if current_value is not None:
+            if incremental:
+                raise Exception(f"Incremental is set, but there is already a value for {attr}. This is probably a bug.")
             if not typer.confirm(f"Would you like to overwrite current value of {attr}: {current_value}?",
                                  default=True):
                 continue  # next attribute
@@ -189,9 +195,11 @@ def config_dialog(filename: Union[Path, str],
     typer.echo(f"Config to be saved in {filename}:")
     typer.echo(message=dumps(new_config))
 
-    save = typer.confirm("Would you like to save it?", default=True)
+    save = typer.confirm("Would you like to save it? The wizard will create all missing parent directories",
+                         default=True)
     if save:
         typer.echo(f"Saving config as {filename}")
+        filename.parent.mkdir(parents=True, exist_ok=True)
         filename.write_text(dumps(new_config))
         return True
     else:
@@ -204,3 +212,29 @@ def get_filled_attributes_from_file(filename: Union[Path, str]) -> FrozenSet[str
     if not filename.exists():
         return frozenset()
     return frozenset(_get_filled_attributes(parse(filename.read_text())))
+
+
+def _generate_next_page(filename: Union[Path, str]) -> int:
+    existing_pages = set(map(lambda a: a.split('.')[1],
+                             filter(lambda _:
+                                    _.startswith('pages') and not
+                                    _.startswith("pages.default") and not
+                                    _ == "pages",
+                                    get_filled_attributes_from_file(filename))))
+    page_number = 1
+    while True:
+        if f"page{page_number}" not in existing_pages:
+            return page_number
+        else:
+            page_number = page_number + 1
+
+
+def page_add_dialog(filename: Union[Path, str]) -> bool:
+    """Wrapper around config_dialog that generates a new page section"""
+    # processes list of pages.page1, pages.page2 to "page1", "page2"
+    page_number = _generate_next_page(filename)
+    return config_dialog(filename,
+                         [f'pages.page{page_number}.page_title',
+                          f'pages.page{page_number}.page_file',
+                          DialogParameter(f'pages.page{page_number}.page_space', required=False)],
+                         incremental=True)

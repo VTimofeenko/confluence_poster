@@ -9,6 +9,7 @@ from itertools import product
 # noinspection PyProtectedMember
 from confluence_poster.config_wizard import _get_attribute_by_path as get_attribute_by_path
 from confluence_poster.config_wizard import print_config_file
+from confluence_poster.config_wizard import page_add_dialog
 
 pytestmark = pytest.mark.offline
 
@@ -170,3 +171,21 @@ def test_config_file_printing(prepare_config_file):
     assert print_config_file(config, []) == print_config_file(str(config), [])
     original_value = get_attribute_by_path(tested_path, parse(config_text))
     assert original_value not in print_config_file(config, [tested_path])
+
+
+def test_incremental_config_dialog(prepare_config_file, monkeypatch, capsys):
+    config, config_text = prepare_config_file
+    new_value = 'new_value'
+    setup_input(monkeypatch, [new_value, 'Y'])
+    assert config_dialog(config, attributes=['new_path'], incremental=True)
+    captured = capsys.readouterr()
+    assert 'Current content' not in captured.out, "incremental should suppress printing file altogether"
+    with pytest.raises(Exception):
+        config_dialog(config, attributes=['update_node'], incremental=True)
+
+
+def test_page_add_dialog(prepare_config_file, monkeypatch):
+    config, config_text = prepare_config_file
+    setup_input(monkeypatch, ['title', 'testfile', 'SPC', 'Y'])
+    assert page_add_dialog(config)
+    assert get_attribute_by_path('pages.page1.page_title', parse(config.read_text())) == 'title'

@@ -49,14 +49,15 @@ def validate_config():
                               'User quits the wizard',
                               'User accepts the default choices: create config in home, create local config',
                               'User accepts default choice for local config name'])
-def test_no_params_initial_dialog(user_input, tmp_path, monkeypatch):
+def test_no_params_initial_dialog(user_input: tuple, tmp_path, monkeypatch):
     """Tests the very first run of config wizard, assuming no files currently exist"""
 
     import confluence_poster.config_wizard as _config_wizard
     monkeypatch.setattr(_config_wizard, 'config_dialog', mock_config_dialog)
 
     # Since "user creates config in local directory" requires more user input (tested in a different place)
-    result: Result = default_run_cmd(input="\n".join(user_input) + "\n")
+    result: Result = default_run_cmd(input="\n".join(user_input + ('n',))  # extra 'n' to reject page_add_dialog
+                                           + "\n")
     assert result.exit_code == 0
 
     # Home config exists <=> user replied "Y" on first question or accepted default
@@ -67,7 +68,7 @@ def test_no_params_initial_dialog(user_input, tmp_path, monkeypatch):
 
 def test_no_params_values_filled():
     """Goes through the wizard properly, checks that all values are filled"""
-    _input = ("\n",
+    _input = ("",
               "author",
               'http://confluence.local',
               'admin',
@@ -80,9 +81,14 @@ def test_no_params_values_filled():
               "Some page title",
               "page1.confluencewiki",
               "LOC",
-              "Y"  # save the edit
+              "Y",  # save the edit
+              "Y",  # add more pages
+              'Other page title',
+              'page2.confluencewiki',
+              'LOC',
+              "Y"
               )
-    result: Result = default_run_cmd(input="\n".join(_input) + "\n")  # create in home
+    result: Result = default_run_cmd(input="\n".join(_input) + "\n")
     assert result.exit_code == 0
     validate_config()
 
@@ -96,7 +102,7 @@ def test_command_flags_no_configs(flag, tmp_path, monkeypatch):
     if flag == '--home-only':
         _input = ()
     else:
-        _input = (default_config_name, )
+        _input = (default_config_name, 'N')
 
     result: Result = default_run_cmd(input="\n".join(_input) + "\n", other_args=[flag])
     assert result.exit_code == 0
@@ -112,6 +118,7 @@ def test_prefilled_params(tmp_path):
     _input = ('n',  # no, skip to local config
               "y",  # create local config
               "",  # accept default name for config
+              "",
               'http://confluence.local',
               'admin',
               'password',
@@ -120,9 +127,12 @@ def test_prefilled_params(tmp_path):
               "Some page title",
               "page1.confluencewiki",
               "LOC",  # page space
-              "Y"  # save the edit
+              "Y",  # save the edit
+              "N"  # do not add any more pages
               )
 
     result: Result = default_run_cmd(input="\n".join(_input) + "\n")
     assert result.exit_code == 0
     validate_config()
+
+# TODO: test that directory in home is created

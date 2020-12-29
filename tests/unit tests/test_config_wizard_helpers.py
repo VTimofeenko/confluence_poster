@@ -9,6 +9,8 @@ from confluence_poster.config_wizard import _get_attribute_by_path as get_attrib
 from confluence_poster.config_wizard import _get_filled_attributes as get_filled_attributes
 # noinspection PyProtectedMember
 from confluence_poster.config_wizard import _dialog_prompt, DialogParameter
+# noinspection PyProtectedMember
+from confluence_poster.config_wizard import _generate_next_page as generate_next_page
 from confluence_poster.config_wizard import get_filled_attributes_from_file
 import pytest
 from itertools import product
@@ -171,3 +173,14 @@ def test_dialog_parameter_methods():
 
     assert d1 in {"Garbage", inner_string}
     assert str(d1) == inner_string
+
+
+@pytest.mark.parametrize('pages_amount', (0, 1, 2))
+def test_generate_next_page(tmp_path, pages_amount):
+    config = tmp_path / "config.toml"
+    config.write_text("[pages]\n[pages.default]\npage_space = 'LOC'\n")
+    with config.open("a") as f:
+        for page_no in range(1, pages_amount + 1):
+            f.write(f"[pages.page{page_no}]\npage_title = 'foz'\n")
+
+    assert generate_next_page(config) == pages_amount + 1

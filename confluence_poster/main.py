@@ -230,22 +230,27 @@ def create_config(local_only: Optional[bool] = typer.Option(False,
                                                            "--home-only",
                                                            help="Create config only in the $XDG_CONFIG_HOME")):
     import xdg
-    from confluence_poster.config_wizard import config_dialog, get_filled_attributes_from_file, print_config_file
+    from confluence_poster.config_wizard import config_dialog, \
+        get_filled_attributes_from_file, \
+        print_config_file, \
+        page_add_dialog
     from functools import partial
 
     home_config_location = xdg.xdg_config_home() / 'confluence_poster/config.toml'
 
+    # TODO: comments
     all_params = (DialogParameter('author', required=False),
-                  # pages:
-                  DialogParameter('pages.default.page_space', required=False),
-                  DialogParameter('pages.page1.page_title'),
-                  DialogParameter('pages.page1.page_file'),
-                  DialogParameter('pages.page1.page_space', required=False),
                   # auth:
                   DialogParameter('auth.confluence_url'),
                   DialogParameter('auth.username'),
                   DialogParameter('auth.password', required=False, hide_input=True),
-                  DialogParameter('auth.is_cloud', type=bool))
+                  DialogParameter('auth.is_cloud', type=bool),
+                  # pages:
+                  DialogParameter('pages.default.page_space', required=False),
+                  DialogParameter('pages.page1.page_title'),
+                  DialogParameter('pages.page1.page_file'),
+                  DialogParameter('pages.page1.page_space', required=False)
+                  )
     home_only_params = ('author', 'auth.confluence_url', 'auth.username', 'auth.password', 'auth.is_cloud')
     # To hide password in prompts
     _print_config_file = partial(print_config_file, hidden_attributes=['auth.password'])
@@ -257,9 +262,9 @@ def create_config(local_only: Optional[bool] = typer.Option(False,
     answer = ''
     if not any([local_only, home_only]):
         typer.echo("Since neither --local-only nor --home-only were specified, wizard will guide you through creating "
-                   f"configs in {xdg.xdg_config_home()} and {Path.cwd()}")
+                   f"config files in {home_config_location.parent} and {Path.cwd()}")
 
-        answer = typer.prompt(f"Create config in {xdg.xdg_config_home()}? [Y/n/q]"
+        answer = typer.prompt(f"Create config in {home_config_location.parent}? [Y/n/q]"
                               "\n* 'n' skips to config in the local directory"
                               "\n* 'q' will exit the wizard\n",
                               type=str,
@@ -305,6 +310,9 @@ def create_config(local_only: Optional[bool] = typer.Option(False,
         if dialog_result is None or dialog_result:
             # None means the user does not want to overwrite the file
             break
+
+    while typer.confirm("Add more pages?", default=False):
+        page_add_dialog(Path.cwd() / local_config_name)
 
     typer.echo("Configuration wizard finished. Consider running the validate command to check the generated config")
 
@@ -365,7 +373,7 @@ def main(ctx: typer.Context,
     else:
         state.debug = False
 
-    if ctx.invoked_subcommand != 'create-config':  # no need to validate or load the config if we're loading it
+    if ctx.invoked_subcommand != 'create-config':  # no need to validate or load the config if we're creating it
         state.force = force
         state.force_create = force_create
         state.print_report = report
@@ -405,5 +413,3 @@ def main(ctx: typer.Context,
             password=_password,
             api_version=api_version
         )
-    else:
-        typer.echo("Starting config wizard")
