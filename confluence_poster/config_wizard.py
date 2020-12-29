@@ -63,12 +63,14 @@ def _dialog_prompt(parameter: Union[DialogParameter, str], default_value=None) -
         if default_value is None:
             _default_value = ''
 
-    if default_value is not None:
-        if not parameter.hide_input:
-            message += [f"Current value is {default_value}. Press [Enter] to use it."]
-        else:
+    if parameter.hide_input:
+        if default_value is not None:
             message += [f'Current value is set, but input is hidden, indicating a sensitive field.',
                         'Press [Enter] to reuse the current value.']
+        else:
+            message += ['This parameter is marked as sensitive, input is hidden']
+    elif default_value is not None:
+        message += [f"Current value is {default_value}. Press [Enter] to use it."]
 
     new_value = typer.prompt(text="\n".join(message),
                              default=_default_value,
