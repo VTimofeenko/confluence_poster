@@ -229,6 +229,7 @@ def create_config(local_only: Optional[bool] = typer.Option(False,
                   home_only: Optional[bool] = typer.Option(False,
                                                            "--home-only",
                                                            help="Create config only in the $XDG_CONFIG_HOME")):
+    """Runs configuration wizard. The wizard guides through setting up values for config."""
     import xdg
     from confluence_poster.config_wizard import config_dialog, \
         get_filled_attributes_from_file, \

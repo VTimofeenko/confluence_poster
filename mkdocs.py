@@ -69,6 +69,5 @@ def render_template() -> str:
 def generate_docs():
     print(render_template())
 
-
-if __name__ == '__main__':
-    generate_docs()
+if __name__ == "__main__":
+    Path("README.md").write_text(render_template())

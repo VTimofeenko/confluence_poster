@@ -1,7 +1,7 @@
 # Description
 
 Supplementary script for writing confluence wiki articles in
-vim. Uses information from config.toml to post the article content to confluence.
+vim. Uses information from the config to post the article content to confluence.
 
 **Usage**:
 
@@ -11,6 +11,7 @@ $ confluence_poster [OPTIONS] COMMAND [ARGS]...
 
 **General Options**:
 
+* `--version`: Show version and exit
 * `--config PATH`: The file containing configuration. If not specified - config.toml from the same directory is used  [default: config.toml]
 * `--page-title TEXT`: Override page title from config. Applicable if there is only one page.
 * `--parent-page-title TEXT`: Provide a parent title to search for. Applicable if there is only one page.
@@ -24,10 +25,11 @@ $ confluence_poster [OPTIONS] COMMAND [ARGS]...
 * `--show-completion`: Show completion for the current shell, to copy it or customize the installation.
 * `--help`: Show this message and exit.
 
-These options can be specified for any `COMMAND`.
+These options can be specified for any `COMMAND` except for  `create-config` which ignores these options.
 
 **Commands**:
 
+* `create-config`: Runs configuration wizard.
 * `post-page`: Posts the content of the pages.
 * `validate`: Validates the provided settings.
 
@@ -63,17 +65,31 @@ $ confluence_poster validate [OPTIONS]
 * `--online`: Test the provided authentication settings on the actual instance of confluence.
 * `--help`: Show this message and exit.
 
+## `confluence_poster create-config`
+
+Runs configuration wizard. The wizard guides through setting up values for config.
+
+**Options**:
+
+* `--local-only`: Create config only in the local folder  [default: False]
+* `--home-only`: Create config only in the $XDG_CONFIG_HOME  [default: False]
+* `--help`: Show this message and exit.
+
 # Installation
 
-Currently the project is installable through
+Install the project from PyPI:
 
 ```console
 $ pip install confluence-poster
 ```
 
+To start using `confluence_poster` either create the config manually or run `confluence_poster create-config` to start
+configuration wizard which will guide you through the configuration.
+
 # Config format
 
-By default the confluence_poster tries to look for config file `config.toml` in the directory where it is invoked. The format is as follows:
+By default the confluence_poster tries to look for config file `config.toml` in the directory where it is invoked and in
+XDG_HOME_CONFIG. The config format is as follows:
 
 ```toml
 # If the page was not updated by the username specified here, throw an error.
@@ -109,14 +125,16 @@ is_cloud = false
 
 ```
 
-**Note on password and Cloud instances**: if confluence is hosted by Atlassian, the password is the API token. Follow instructions at [this link](https://confluence.atlassian.com/cloud/api-tokens-938839638.html).
+**Note on password and Cloud instances**: if confluence is hosted by Atlassian, the password is the API token.
+Follow instructions at [this link](https://confluence.atlassian.com/cloud/api-tokens-938839638.html).
 
 # Contrib directory
 
-There are shell completions for bash and zsh as well as a sample of [git post-commit hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks).
+There are shell completions for bash and zsh as well as a sample of
+[git post-commit hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks).
 
 # See also
 
 * [Vim confluencewiki syntax](https://www.vim.org/scripts/script.php?script_id=1994)
 * [Paste confluence image in vim](https://github.com/SabbathHex/confluencewiki-img-paste.vim)
-* [Atlassian python API](https://atlassian-python-api.readthedocs.io/en/latest/) (On [Github](https://github.com/atlassian-api/atlassian-python-ap))
+* [Atlassian python API](https://atlassian-python-api.readthedocs.io/en/latest/) (On [Github](https://github.com/atlassian-api/atlassian-python-api))
