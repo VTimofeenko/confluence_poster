@@ -10,26 +10,38 @@ import re
 from inspect import currentframe
 
 
-real_confluence_config = 'local_config.toml'  # The config filename for testing against local instance
-other_user_config = 'local_config_other_user.toml'  # Config with a different user
+real_confluence_config = (
+    "local_config.toml"  # The config filename for testing against local instance
+)
+other_user_config = "local_config_other_user.toml"  # Config with a different user
 created_pages = set()
 
 if Path(real_confluence_config).exists():
     real_config = Config(real_confluence_config)
-    confluence_instance = Confluence(url=real_config.auth.url,
-                                     username=real_config.auth.username,
-                                     password=real_config.auth.password)
+    confluence_instance = Confluence(
+        url=real_config.auth.url,
+        username=real_config.auth.username,
+        password=real_config.auth.password,
+    )
 else:
-    print(f"Config for testing local confluence: {real_confluence_config} does not exist.")
+    print(
+        f"Config for testing local confluence: {real_confluence_config} does not exist."
+    )
     confluence_instance = None
 
 
-def mk_tmp_file(tmp_path, filename: str = None,
-                config_to_clone: str = 'config.toml',
-                key_to_pop: str = None,  # key path in form 'first_key.second_key' to descend into config
-                key_to_update: str = None, value_to_update=None):
+def mk_tmp_file(
+    tmp_path,
+    filename: str = None,
+    config_to_clone: str = "config.toml",
+    key_to_pop: str = None,  # key path in form 'first_key.second_key' to descend into config
+    key_to_update: str = None,
+    value_to_update=None,
+):
     # Helper function to break config file in various ways
-    if [key_to_update, value_to_update].count(None) == 1:  # TODO: 'not supplied' vs 'supplied None'
+    if [key_to_update, value_to_update].count(
+        None
+    ) == 1:  # TODO: 'not supplied' vs 'supplied None'
         raise ValueError("Only one update-related parameter was supplied")
 
     if filename is None:
@@ -39,7 +51,7 @@ def mk_tmp_file(tmp_path, filename: str = None,
     original_config = toml.load(config_to_clone)
     if key_to_pop:
         _ = original_config
-        li = key_to_pop.split('.')
+        li = key_to_pop.split(".")
         for key in li:
             if key != li[-1]:
                 _ = _[key]
@@ -47,7 +59,7 @@ def mk_tmp_file(tmp_path, filename: str = None,
                 _.pop(key)
     if key_to_update:
         _ = original_config
-        li = key_to_update.split('.')
+        li = key_to_update.split(".")
         for key in li:
             if key != li[-1]:
                 _ = _[key]
@@ -62,28 +74,33 @@ def clone_local_config(other_config: str = real_confluence_config):
     return partial(mk_tmp_file, config_to_clone=other_config)
 
 
-def generate_run_cmd(runner: CliRunner, app,
-                     default_args: Union[List, None] = None) -> Callable:
+def generate_run_cmd(
+    runner: CliRunner, app, default_args: Union[List, None] = None
+) -> Callable:
     """Config may be either string with path to config file or path object itself"""
     if default_args is None:
         default_args = []
 
-    def _run_with_config(config=real_confluence_config,
-                         pre_args: Union[List, None] = None,
-                         other_args: Union[List, None] = None,
-                         **kwargs):
+    def _run_with_config(
+        config=real_confluence_config,
+        pre_args: Union[List, None] = None,
+        other_args: Union[List, None] = None,
+        **kwargs,
+    ):
         if pre_args is None:
             pre_args = []
         if not isinstance(config, str):
             config = str(config)
         if other_args is None:
             other_args = []
-        return runner.invoke(app, ["--config", config] + pre_args + default_args + other_args, **kwargs)
+        return runner.invoke(
+            app, ["--config", config] + pre_args + default_args + other_args, **kwargs
+        )
+
     return _run_with_config
 
 
-def mk_fake_file(tmp_path,
-                 filename: str = None):
+def mk_fake_file(tmp_path, filename: str = None):
     """Generates a .confluencewiki file filled with random stuff. Also generates a cloned real confluence config
     with one page path updated"""
     if filename is None:
@@ -93,9 +110,13 @@ def mk_fake_file(tmp_path,
     fake_text = Faker().paragraph(nb_sentences=10)
     fake_file.write_text(fake_text)
 
-    fake_config = mk_tmp_file(tmp_path, filename="fake_config.toml",
-                              config_to_clone=real_confluence_config,
-                              key_to_update="pages.page1.page_file", value_to_update=str(fake_file))
+    fake_config = mk_tmp_file(
+        tmp_path,
+        filename="fake_config.toml",
+        config_to_clone=real_confluence_config,
+        key_to_update="pages.page1.page_file",
+        value_to_update=str(fake_file),
+    )
 
     return fake_file, fake_text, fake_config
 
@@ -123,28 +144,31 @@ def generate_fake_page(tmp_path) -> (str, str, str):
     """Generates a title, fake content and the path to the temporary file in temporary path"""
     title = next(fake_title_generator)
     content = next(fake_content_generator)
-    filename = tmp_path / title.lower().replace(' ', '_')
+    filename = tmp_path / title.lower().replace(" ", "_")
     filename.write_text(content)
     return title, content, str(filename)
 
 
-def generate_local_config(tmp_path, pages: int = 1, filename: str = None) -> (str, Config):
+def generate_local_config(
+    tmp_path, pages: int = 1, filename: str = None
+) -> (str, Config):
     """Clones the auth and default space from local config, and generates the required amount of pages.
     Returns path to the new config and instance of it"""
     if filename is None:
         filename = "local_config.toml"
 
-    new_config = clone_local_config()(tmp_path, filename=filename, key_to_pop="pages.page1")
+    new_config = clone_local_config()(
+        tmp_path, filename=filename, key_to_pop="pages.page1"
+    )
     for page_number in range(pages):
         title, _, filename = generate_fake_page(tmp_path)
-        new_config = mk_tmp_file(tmp_path, filename=str(new_config),
-                                 config_to_clone=new_config,
-                                 key_to_update=f"pages.page{page_number+1}",
-                                 value_to_update={
-                                     "page_title": title,
-                                     "page_file": filename
-
-                                 })
+        new_config = mk_tmp_file(
+            tmp_path,
+            filename=str(new_config),
+            config_to_clone=new_config,
+            key_to_update=f"pages.page{page_number+1}",
+            value_to_update={"page_title": title, "page_file": filename},
+        )
     return new_config, Config(str(new_config))
 
 
@@ -152,7 +176,9 @@ def page_created(page_title: str, space: str = None) -> bool:
     """Checks that the page has been created by looking it up by title"""
     if space is None:
         space = real_config.pages[0].page_space
-    return confluence_instance.get_page_by_title(space=space, title=page_title) is not None
+    return (
+        confluence_instance.get_page_by_title(space=space, title=page_title) is not None
+    )
 
 
 def get_pages_ids_from_stdout(stdout: str) -> Union[Set[int], Set]:
@@ -179,15 +205,23 @@ def check_body_and_title(page_id: int, body_text: str, title_text: str):
 
 
 def get_page_body(page_id):
-    return confluence_instance.get_page_by_id(page_id, expand='body.storage').get('body').get('storage').get('value')
+    return (
+        confluence_instance.get_page_by_id(page_id, expand="body.storage")
+        .get("body")
+        .get("storage")
+        .get("value")
+    )
 
 
 def get_page_title(page_id):
-    return confluence_instance.get_page_by_id(page_id, expand='body.storage').get('title')
+    return confluence_instance.get_page_by_id(page_id, expand="body.storage").get(
+        "title"
+    )
 
 
-def run_with_config(config_file, default_run_cmd: Callable, record_pages: set = None,
-                    *args, **kwargs) -> Result:
+def run_with_config(
+    config_file, default_run_cmd: Callable, record_pages: set = None, *args, **kwargs
+) -> Result:
     """Function that runs the default_run_cmd with supplied config and records the generated pages in the fixture"""
     result = default_run_cmd(config=config_file, *args, **kwargs)
     # This allows manipulating the set of the pages to be destroyed at the end
@@ -198,28 +232,38 @@ def run_with_config(config_file, default_run_cmd: Callable, record_pages: set = 
             # go back the stack
             frame = frame.f_back
             if frame is None:
-                _record_pages = record_pages  # for cases when this is called from fixture
+                _record_pages = (
+                    record_pages  # for cases when this is called from fixture
+                )
                 break
-            if (_record_pages := frame.f_locals.get('funcargs', {}).get('record_pages')) is not None:
+            if (
+                _record_pages := frame.f_locals.get("funcargs", {}).get("record_pages")
+            ) is not None:
                 # if global fixture is found
                 break
 
-        assert type(_record_pages) is set, "Looks like record_set manipulation is going to fail"
+        assert (
+            type(_record_pages) is set
+        ), "Looks like record_set manipulation is going to fail"
         _record_pages |= _created_pages
     config = Config(config_file)
     for page_id in _created_pages:
         """Make sure that the pages got created with proper content"""
-        if 'pre_args' in kwargs and '--page-title' in kwargs.get("pre_args"):
+        if "pre_args" in kwargs and "--page-title" in kwargs.get("pre_args"):
             # Page title specified manually, only one page in config
             found_page = config.pages[0]
-            _ = kwargs.get("pre_args").index('--page-title')
+            _ = kwargs.get("pre_args").index("--page-title")
             page_title = kwargs.get("pre_args")[_ + 1]
         else:
             page_title = get_page_title(page_id)
-            found_page: Page = next(_ for _ in config.pages if _.page_title == page_title)
+            found_page: Page = next(
+                _ for _ in config.pages if _.page_title == page_title
+            )
 
-        with open(found_page.page_file, 'r') as page_file:
+        with open(found_page.page_file, "r") as page_file:
             page_text = page_file.read()
-            assert page_text in get_page_body(page_id), f"Page {page_title} has incorrect content"
+            assert page_text in get_page_body(
+                page_id
+            ), f"Page {page_title} has incorrect content"
 
     return result

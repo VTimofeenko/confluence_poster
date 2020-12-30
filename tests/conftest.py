@@ -6,7 +6,7 @@ from atlassian import errors
 @pytest.fixture(scope="session", autouse=True)
 def record_pages():
     """Cleans up created pages. The created_pages set is manipulated through inspect module when the runner command
-    is executed. """
+    is executed."""
     created_pages = set()
     yield created_pages
 

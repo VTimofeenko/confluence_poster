@@ -17,7 +17,9 @@ class Page:
     def __eq__(self, other) -> bool:
         if not isinstance(other, Page):
             raise ValueError
-        return (self.page_title == other.page_title) and (self.page_space == other.page_space)
+        return (self.page_title == other.page_title) and (
+            self.page_space == other.page_space
+        )
 
 
 @dataclass
@@ -30,14 +32,17 @@ class Auth:
 
 class PartialConfig(UserDict):
     """A class that allows reading file contents or data from a dictionary"""
-    def __init__(self,
-                 file: Union[str, Path, None] = None,
-                 data: Union[dict, None] = None):
+
+    def __init__(
+        self, file: Union[str, Path, None] = None, data: Union[dict, None] = None
+    ):
         if file is None and data is None:
             raise ValueError("No data provided")
 
         if file is not None and data is not None:
-            raise ValueError("Both file and data were provided, cannot determine preference")
+            raise ValueError(
+                "Both file and data were provided, cannot determine preference"
+            )
 
         if data is not None:
             _data = data
@@ -49,9 +54,10 @@ class PartialConfig(UserDict):
 
 class Config(PartialConfig):
     """Class that loads the config file and provides interface to its values"""
-    def __init__(self,
-                 file: Union[str, Path, None] = None,
-                 data: Union[dict, None] = None):
+
+    def __init__(
+        self, file: Union[str, Path, None] = None, data: Union[dict, None] = None
+    ):
         """File: file to read config from
         is_global: allows suppressing checks to implement config inheritance"""
         super(Config, self).__init__(file, data)
@@ -73,21 +79,29 @@ class Config(PartialConfig):
             item_content = pages[item]
             if isinstance(item_content, dict):
                 if item == "default":
-                    default_space = item_content.get("page_space", None)  # None is OK here, checked later
+                    default_space = item_content.get(
+                        "page_space", None
+                    )  # None is OK here, checked later
                     if not isinstance(default_space, str) or default_space is None:
                         raise ValueError("default.page_space should be a string")
                 else:  # this is a page definition
                     for prop in item_content:
                         if not isinstance(item_content[prop], str):
-                            raise ValueError(f"{prop} property of a page is not a string")
+                            raise ValueError(
+                                f"{prop} property of a page is not a string"
+                            )
 
-                    page = Page(item_content.get('page_title', None),
-                                item_content['page_file'],
-                                item_content.get('page_space', None),
-                                item_content.get('page_parent_title', None))
+                    page = Page(
+                        item_content.get("page_title", None),
+                        item_content["page_file"],
+                        item_content.get("page_space", None),
+                        item_content.get("page_parent_title", None),
+                    )
                     self.__pages.append(page)
             else:
-                raise ValueError("Pages section is malformed, refer to sample config.toml")
+                raise ValueError(
+                    "Pages section is malformed, refer to sample config.toml"
+                )
 
         # Validate pages
         # Page space may be none, in that case default space must be specified
@@ -98,14 +112,18 @@ class Config(PartialConfig):
                 if default_space is not None:
                     page.page_space = default_space
                 else:
-                    raise ValueError(f"Page '{page.page_title}' does not have page_space specified,"
-                                     f" neither is default space")
+                    raise ValueError(
+                        f"Page '{page.page_title}' does not have page_space specified,"
+                        f" neither is default space"
+                    )
             if page.page_title is None and len(self.__pages) > 1:
-                raise ValueError("There are more than 1 page, and one of the names is not specified")
+                raise ValueError(
+                    "There are more than 1 page, and one of the names is not specified"
+                )
 
             # Check that there are no pages with same space and name - they will overwrite each other
-            page_title_func = attrgetter('page_title')
-            page_space_func = attrgetter('page_space')
+            page_title_func = attrgetter("page_title")
+            page_space_func = attrgetter("page_space")
             groups = groupby(sorted(self.__pages, key=page_title_func), page_title_func)
             for page_title, g in groups:
                 _ = list(g)
@@ -113,7 +131,9 @@ class Config(PartialConfig):
                 for space_name, group in groups_space:
                     _ = list(group)
                     if len(_) > 1:
-                        raise ValueError(f"There are more than 1 page called '{page_title}' in space {space_name}")
+                        raise ValueError(
+                            f"There are more than 1 page called '{page_title}' in space {space_name}"
+                        )
 
     @property
     def auth(self):
@@ -124,7 +144,12 @@ class Config(PartialConfig):
         for mandatory_config in ["confluence_url", "username", "is_cloud"]:
             if mandatory_config not in auth:
                 raise KeyError(f"{mandatory_config} not in auth section")
-        self.__auth = Auth(auth['confluence_url'], auth['username'], auth.get('password', None), auth['is_cloud'])
+        self.__auth = Auth(
+            auth["confluence_url"],
+            auth["username"],
+            auth.get("password", None),
+            auth["is_cloud"],
+        )
 
     @property
     def author(self):
@@ -137,7 +162,9 @@ class Config(PartialConfig):
         if not isinstance(author, str):
             raise ValueError("Author is not a string")
         elif len(author) == 0:
-            raise ValueError("Author's name is specified in the config but is empty. "
-                             "Specify it or remove the setting to use the authentication username for checks.")
+            raise ValueError(
+                "Author's name is specified in the config but is empty. "
+                "Specify it or remove the setting to use the authentication username for checks."
+            )
 
         self.__author = author
