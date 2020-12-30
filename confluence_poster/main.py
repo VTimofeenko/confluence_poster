@@ -3,12 +3,15 @@ from typing import Optional, List, Union, Tuple
 from pathlib import Path
 from logging import basicConfig, DEBUG
 from confluence_poster.poster_config import Config, Page
+from confluence_poster.config_loader import load_config
+from confluence_poster.config_wizard import DialogParameter
 from atlassian import Confluence
 from atlassian.errors import ApiError
 from dataclasses import dataclass, field
 from requests.exceptions import ConnectionError
 
 __version__ = '1.1.0'
+default_config_name = 'config.toml'
 
 
 def version_callback(value: bool):
@@ -219,14 +222,128 @@ def validate(online: Optional[bool] = typer.Option(False,
     return
 
 
+@app.command()
+def create_config(local_only: Optional[bool] = typer.Option(False,
+                                                            "--local-only",
+                                                            help="Create config only in the local folder"),
+                  home_only: Optional[bool] = typer.Option(False,
+                                                           "--home-only",
+                                                           help="Create config only in the $XDG_CONFIG_HOME")):
+    import xdg
+    from confluence_poster.config_wizard import config_dialog, \
+        get_filled_attributes_from_file, \
+        print_config_with_hidden_attrs, \
+        page_add_dialog
+    from functools import partial
+
+    home_config_location = xdg.xdg_config_home() / 'confluence_poster/config.toml'
+
+    all_params = (DialogParameter('author',
+                                  comment="If the page was not updated by the username specified here, throw an error."
+                                          "\nIf this setting is omitted - username from auth section "
+                                          "is used for checks",
+                                  required=False),
+                  # auth:
+                  DialogParameter('auth.confluence_url',
+                                  comment="URL of confluence instance"),
+                  DialogParameter('auth.username',
+                                  comment="Username for authentication in Confluence"),
+                  DialogParameter('auth.password',
+                                  comment="Password for authentication. May be supplied through runtime option or "
+                                          "environment",
+                                  required=False, hide_input=True),
+                  DialogParameter('auth.is_cloud',
+                                  comment="Whether the confluence instance is a cloud one",
+                                  type=bool),
+                  # pages:
+                  DialogParameter('pages.default.page_space',
+                                  comment="Space key (e.g. LOC for 'local-dev' space). If defined here - will be used "
+                                          "if a page does not redefine it",
+                                  required=False),
+                  DialogParameter('pages.page1.page_title',
+                                  comment='The title of the page'),
+                  DialogParameter('pages.page1.page_file',
+                                  comment="File containing page text"),
+                  DialogParameter('pages.page1.page_space',
+                                  comment="Key of the space with the page",
+                                  required=False)
+                  )
+    home_only_params = ('author', 'auth.confluence_url', 'auth.username', 'auth.password', 'auth.is_cloud')
+    # To hide password in prompts
+    _print_config_file = partial(print_config_with_hidden_attrs, hidden_attributes=['auth.password'])
+    config_dialog = partial(config_dialog, config_print_function=_print_config_file)
+    page_add_dialog = partial(page_add_dialog, config_print_function=_print_config_file)
+
+    # Initial prompt
+    typer.echo("Starting config wizard.")
+    typer.echo("This wizard will guide you through creating the configuration files.")
+    answer = ''
+    if not any([local_only, home_only]):
+        typer.echo("Since neither --local-only nor --home-only were specified, wizard will guide you through creating "
+                   f"config files in {home_config_location.parent} and {Path.cwd()}")
+
+        answer = typer.prompt(f"Create config in {home_config_location.parent}? [Y/n/q]"
+                              "\n* 'n' skips to config in the local directory"
+                              "\n* 'q' will exit the wizard\n",
+                              type=str,
+                              default='y').lower()
+
+        if answer == 'q':
+            raise typer.Exit()
+
+    if (answer == 'y' and not local_only) or home_only:
+        # Create config in home
+        while True:
+            dialog_result = config_dialog(filename=home_config_location,
+                                          attributes=[_ for _ in all_params if _ in home_only_params])
+            if dialog_result is None or dialog_result:
+                # None means the user does not want to overwrite the file
+                break
+
+    if home_only:
+        # If --home-only is specified - no need to create another one in local folder
+        typer.echo("--home-only specified, not attempting to create any more configs.")
+        raise typer.Exit()
+
+    if not local_only:
+        # If local-only is passed - no need to ask for confirmation of creating a local only config
+        local_answer = typer.confirm(f"Proceed to create config in {Path.cwd()}?",
+                                     default=True)
+        if not local_answer:
+            typer.echo("Exiting.")
+            raise typer.Exit()
+
+    # Create config in current working directory
+    typer.echo("Creating config in local directory.")
+    local_config_name = typer.prompt("Please provide the name of local config",
+                                     type=str,
+                                     default=default_config_name)
+
+    home_parameters = get_filled_attributes_from_file(home_config_location)
+    local_config_parameters = [_ for _ in all_params if _ not in home_parameters]
+
+    while True:
+        dialog_result = config_dialog(filename=Path.cwd() / local_config_name,
+                                      attributes=local_config_parameters)
+        if dialog_result is None or dialog_result:
+            # None means the user does not want to overwrite the file
+            break
+
+    while typer.confirm("Add more pages?", default=False):
+        page_add_dialog(Path.cwd() / local_config_name)
+
+    typer.echo("Configuration wizard finished. Consider running the `validate` command to check the generated config")
+
+
 @app.callback()
-def main(version: Optional[bool] = typer.Option(None,
+def main(ctx: typer.Context,
+         version: Optional[bool] = typer.Option(None,
                                                 "--version",
                                                 help="Show version and exit",
                                                 callback=version_callback),
-         config: Path = typer.Option(default="config.toml",
+         config: Path = typer.Option(default=default_config_name,
                                      help="The file containing configuration. "
-                                          "If not specified - config.toml from the same directory is used"),
+                                          f"If not specified - {default_config_name} from the same directory is used"),
          page_title: Optional[str] = typer.Option(None, help="Override page title from config."
                                                              " Applicable if there is only one page."),
          parent_page_title: Optional[str] = typer.Option(None, help="Provide a parent title to search for."
@@ -259,8 +376,8 @@ def main(version: Optional[bool] = typer.Option(None,
                                               show_default=False,
                                               help="Enable debug logging. "
                                                    "Not enabled by default.")):
-    """ Supplementary script for writing confluence wiki articles in
-    vim. Uses information from config.toml to post the article content to confluence.
+    """Supplementary script for writing confluence wiki articles in
+    vim. Uses information from the config to post the article content to confluence.
     """
     typer.echo("Starting up confluence_poster")
     if debug:
@@ -274,42 +391,43 @@ def main(version: Optional[bool] = typer.Option(None,
     else:
         state.debug = False
 
-    state.force = force
-    state.force_create = force_create
-    state.print_report = report
+    if ctx.invoked_subcommand != 'create-config':  # no need to validate or load the config if we're creating it
+        state.force = force
+        state.force_create = force_create
+        state.print_report = report
+        state.minor_edit = minor_edit
 
-    typer.echo("Reading config")
-    confluence_config = Config(str(config))
-    state.config = confluence_config
+        typer.echo("Reading config")
+        confluence_config = load_config(config)
+        state.config = confluence_config
 
-    state.minor_edit = minor_edit
+        # Check that the parameters are not used with more than 1 page in the config
+        if page_title or parent_page_title:
+            if len(confluence_config.pages) > 1:
+                typer.echo("Page title specified as a parameter but there are more than 1 page in the config. "
+                           "Aborting.")
+                raise typer.Exit(1)
+            if page_title:
+                state.config.pages[0].page_title = page_title
+            if parent_page_title:
+                state.config.pages[0].parent_page_title = parent_page_title
 
-    # Check that the parameters are not used with more than 1 page in the config
-    if page_title or parent_page_title:
-        if len(confluence_config.pages) > 1:
-            typer.echo("Page title specified as a parameter but there are more than 1 page in the config. Aborting.")
+        # Validate password
+        try:
+            _password = next(_ for _ in [password, confluence_config.auth.password] if _ is not None)
+        except StopIteration:
+            typer.echo("Password is not specified in environment, parameter or the config. Aborting")
             raise typer.Exit(1)
-        if page_title:
-            state.config.pages[0].page_title = page_title
-        if parent_page_title:
-            state.config.pages[0].parent_page_title = parent_page_title
 
-    # Validate password
-    try:
-        _password = next(_ for _ in [password, confluence_config.auth.password] if _ is not None)
-    except StopIteration:
-        typer.echo("Password is not specified in environment, parameter or the config. Aborting")
-        raise typer.Exit(1)
+        # set API version
+        if confluence_config.auth.is_cloud:
+            api_version = "cloud"
+        else:
+            api_version = "latest"
 
-    # set API version
-    if confluence_config.auth.is_cloud:
-        api_version = "cloud"
-    else:
-        api_version = "latest"
-
-    state.confluence_instance = Confluence(
-        url=confluence_config.auth.url,
-        username=confluence_config.auth.username,
-        password=_password,
-        api_version=api_version
-    )
+        state.confluence_instance = Confluence(
+            url=confluence_config.auth.url,
+            username=confluence_config.auth.username,
+            password=_password,
+            api_version=api_version
+        )

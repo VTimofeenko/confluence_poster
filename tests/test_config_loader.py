@@ -47,8 +47,8 @@ def test_config_construct(tmp_path, setup_xdg_dirs, monkeypatch, dir_undefined):
 
     # Set up dirs and files for test
     config_file = mk_tmp_file(tmp_path=tmp_path, key_to_pop='auth')
-    monkeypatch.setenv('XDG_CONFIG_HOME', my_xdg_config_home)
-    monkeypatch.setenv('XDG_CONFIG_DIRS', my_xdg_config_dirs)
+    monkeypatch.setenv('XDG_CONFIG_HOME', str(my_xdg_config_home))
+    monkeypatch.setenv('XDG_CONFIG_DIRS', str(my_xdg_config_dirs))
 
     _ = load_config(local_config=config_file)
     repo_config = Config('config.toml')
@@ -71,8 +71,8 @@ def test_util_merge():
 
 def test_no_configs_except_local(monkeypatch):
     """Checks that the script works if only the local config exists"""
-    monkeypatch.setenv('XDG_CONFIG_HOME', None)
-    monkeypatch.setenv('XDG_CONFIG_DIRS', None)
+    monkeypatch.setenv('XDG_CONFIG_HOME', str(None))
+    monkeypatch.setenv('XDG_CONFIG_DIRS', str(None))
     _ = load_config(Path('config.toml'))
     repo_config = Config('config.toml')
     assert repo_config == _

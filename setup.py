@@ -17,7 +17,8 @@ setup(
         "typer>=0.3.2",
         "toml",
         "requests",
-        "xdg"
+        "xdg>=5.0.1",
+        "tomlkit==0.7.0"
     ],
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",

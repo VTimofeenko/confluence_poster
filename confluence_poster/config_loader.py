@@ -28,7 +28,7 @@ def merge_configs(first_config: Mapping, other_config: Mapping):
 
 def load_config(local_config: Path) -> Config:
     """Function that goes through the config directories trying to load the config.
-    Reads configs from XDG_CONFIG_DIRS, then from XGD_CONFIG_HOME, then the local one - either the default one, or
+    Reads configs from XDG_CONFIG_DIRS, then from XDG_CONFIG_HOME, then the local one - either the default one, or
     supplied through command line."""
     final_config = UserDict()
     for path in xdg_config_dirs()[:-1] + [xdg_config_home()]:
