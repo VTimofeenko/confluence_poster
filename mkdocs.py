@@ -15,7 +15,7 @@ def get_typer_cli_docs() -> str:
                      capture_output=True,
                      text=True)
     assert typer_docs.returncode == 0
-    return typer_docs.stdout
+    return str(typer_docs.stdout)
 
 
 def process_chapters(chapters: List[str]) -> Dict[str, Dict[str, str]]:
