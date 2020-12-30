@@ -39,6 +39,9 @@ def test_different_config(tmp_path, config_file):
         assert state.config.pages[0].page_title == new_page_name
     else:
         assert result.exit_code == 1
+        assert (
+            "create-config" in result.stdout
+        ), "User should be prompted to create config through wizard"
         assert type(result.exception) is FileNotFoundError
 
 

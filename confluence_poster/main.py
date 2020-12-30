@@ -497,7 +497,11 @@ def main(
         state.minor_edit = minor_edit
 
         typer.echo("Reading config")
-        confluence_config = load_config(config)
+        try:
+            confluence_config = load_config(config)
+        except FileNotFoundError as e:
+            typer.echo("Config file not found. Consider running `create-config`")
+            raise e
         state.config = confluence_config
 
         # Check that the parameters are not used with more than 1 page in the config
