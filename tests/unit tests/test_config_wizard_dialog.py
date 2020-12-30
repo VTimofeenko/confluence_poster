@@ -188,3 +188,15 @@ def test_page_add_dialog(prepare_config_file, monkeypatch):
     setup_input(monkeypatch, ['title', 'testfile', 'SPC', 'Y'])
     assert page_add_dialog(config)
     assert get_attribute_by_path('pages.page1.page_title', parse(config.read_text())) == 'title'
+
+
+def test_sensitive_parameter_file_mode(tmp_path, monkeypatch, capsys):
+    """Checks that if there is a parameter - the wizard will create file with 600 permissions and alert the user"""
+    monkeypatch.setattr('getpass.getpass', lambda x: "password")
+    setup_input(monkeypatch, ("password", "Y"))
+    config_path: Path = tmp_path / 'config.toml'
+    assert config_dialog(config_path,
+                         attributes=[DialogParameter("hidden param", hide_input=True)])
+    captured = capsys.readouterr()
+    assert "sensitive parameter was passed" in captured.out
+    assert config_path.stat().st_mode == 33152

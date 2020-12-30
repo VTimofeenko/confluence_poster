@@ -135,4 +135,21 @@ def test_prefilled_params(tmp_path):
     assert result.exit_code == 0
     validate_config()
 
-# TODO: test that directory in home is created
+
+def test_dialog_home_directory_created(tmp_path, monkeypatch):
+    """Checks that XDG_HOME_CONFIG/confluence_poster directory is created if it does not exist"""
+    new_home_config: Path = tmp_path / "new_home"  # new_home to override the fixture
+    new_home_config.mkdir()
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(new_home_config))
+    assert not (new_home_config / "confluence_poster").exists()
+    _input = ("",
+              "author",
+              'http://confluence.local',
+              'admin',
+              'password',
+              "false",
+              "Y"  # save the edit
+              )
+
+    default_run_cmd(input="\n".join(_input) + "\n", other_args=['--home-only'])
+    assert (new_home_config / "confluence_poster").exists()

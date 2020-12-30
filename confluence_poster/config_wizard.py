@@ -193,12 +193,16 @@ def config_dialog(filename: Union[Path, str],
     typer.echo(f"Config to be saved:")
     typer.echo(config_print_function(new_config))
 
-    save = typer.confirm("Would you like to save it? The wizard will create all missing parent directories",
+    save = typer.confirm(f"Would you like to save it as {filename}? "
+                         "The wizard will create all missing parent directories",
                          default=True)
     if save:
         typer.echo(f"Saving config as {filename}")
         filename.parent.mkdir(parents=True, exist_ok=True)
         filename.write_text(dumps(new_config))
+        if any([_.hide_input for _ in attributes if isinstance(_, DialogParameter)]):
+            typer.echo("Since a sensitive parameter was passed - saving the config file with 600 permissions.")
+            filename.chmod(0o600)
         return True
     else:
         return False
