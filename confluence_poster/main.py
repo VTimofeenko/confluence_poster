@@ -232,7 +232,7 @@ def create_config(local_only: Optional[bool] = typer.Option(False,
     import xdg
     from confluence_poster.config_wizard import config_dialog, \
         get_filled_attributes_from_file, \
-        print_config_file, \
+        print_config_with_hidden_attrs, \
         page_add_dialog
     from functools import partial
 
@@ -270,8 +270,9 @@ def create_config(local_only: Optional[bool] = typer.Option(False,
                   )
     home_only_params = ('author', 'auth.confluence_url', 'auth.username', 'auth.password', 'auth.is_cloud')
     # To hide password in prompts
-    _print_config_file = partial(print_config_file, hidden_attributes=['auth.password'])
+    _print_config_file = partial(print_config_with_hidden_attrs, hidden_attributes=['auth.password'])
     config_dialog = partial(config_dialog, config_print_function=_print_config_file)
+    page_add_dialog = partial(page_add_dialog, config_print_function=_print_config_file)
 
     # Initial prompt
     typer.echo("Starting config wizard.")

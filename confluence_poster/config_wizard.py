@@ -139,13 +139,10 @@ def _create_or_update_attribute(attribute: str, config: TOMLDocument, value: str
     return parse(dumps(_config))
 
 
-def print_config_file(filename: Union[Path, str], hidden_attributes: Iterable[Union[str, DialogParameter]]) -> str:
+def print_config_with_hidden_attrs(config: TOMLDocument,
+                                   hidden_attributes: Iterable[Union[str, DialogParameter]]) -> str:
     """Given a path on the filesystem and a list of hidden attributes, returns content of that file,
     redacting the sensitive fields"""
-    if type(filename) is str:
-        filename = Path(filename)
-
-    config = parse(filename.read_text())
     _config = deepcopy(config)
     for attribute in hidden_attributes:
         if _get_attribute_by_path(str(attribute), _config) is not None:
@@ -156,7 +153,7 @@ def print_config_file(filename: Union[Path, str], hidden_attributes: Iterable[Un
 
 def config_dialog(filename: Union[Path, str],
                   attributes: Iterable[Union[str, DialogParameter]],
-                  config_print_function: Callable = lambda file: file.read_text(),
+                  config_print_function: Callable = lambda _: print(_),
                   incremental: bool = False
                   ) -> Union[None, bool]:
     """Checks if filename exists and goes through the list of attributes asking the user for the values
@@ -172,13 +169,12 @@ def config_dialog(filename: Union[Path, str],
     new_config = document()
     if filename.exists():
         typer.echo(f"File {filename} already exists.")
+        new_config = parse(filename.read_text())
         if not incremental:
             typer.echo("Current content:")
-            typer.echo(config_print_function(filename))
+            typer.echo(config_print_function(new_config))
             if not typer.confirm(f"File {filename} exists. Overwrite?", default=False):
                 return  # do not save this config file
-
-        new_config = parse(filename.read_text())
 
     # Process attributes list
     for attr in attributes:
@@ -194,8 +190,8 @@ def config_dialog(filename: Union[Path, str],
         if new_value is not None:
             new_config = _create_or_update_attribute(attribute=attr, config=new_config, value=new_value)
 
-    typer.echo(f"Config to be saved in {filename}:")
-    typer.echo(message=dumps(new_config))
+    typer.echo(f"Config to be saved:")
+    typer.echo(config_print_function(new_config))
 
     save = typer.confirm("Would you like to save it? The wizard will create all missing parent directories",
                          default=True)
@@ -231,7 +227,8 @@ def _generate_next_page(filename: Union[Path, str]) -> int:
             page_number = page_number + 1
 
 
-def page_add_dialog(filename: Union[Path, str]) -> bool:
+def page_add_dialog(filename: Union[Path, str],
+                    config_print_function=lambda _: print(_)) -> bool:
     """Wrapper around config_dialog that generates a new page section"""
     # processes list of pages.page1, pages.page2 to "page1", "page2"
     page_number = _generate_next_page(filename)
@@ -239,4 +236,5 @@ def page_add_dialog(filename: Union[Path, str]) -> bool:
                          [f'pages.page{page_number}.page_title',
                           f'pages.page{page_number}.page_file',
                           DialogParameter(f'pages.page{page_number}.page_space', required=False)],
+                         config_print_function=config_print_function,
                          incremental=True)

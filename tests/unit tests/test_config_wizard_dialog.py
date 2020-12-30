@@ -1,5 +1,5 @@
 import io
-from confluence_poster.config_wizard import config_dialog
+from confluence_poster.config_wizard import config_dialog, DialogParameter
 from pathlib import Path
 from typer.testing import CliRunner
 from tomlkit import parse
@@ -8,7 +8,7 @@ from typing import List
 from itertools import product
 # noinspection PyProtectedMember
 from confluence_poster.config_wizard import _get_attribute_by_path as get_attribute_by_path
-from confluence_poster.config_wizard import print_config_file
+from confluence_poster.config_wizard import print_config_with_hidden_attrs
 from confluence_poster.config_wizard import page_add_dialog
 
 pytestmark = pytest.mark.offline
@@ -168,9 +168,8 @@ def test_config_file_printing(prepare_config_file):
     config, config_text = prepare_config_file
     tested_path = "parent.parent_update_node"
 
-    assert print_config_file(config, []) == print_config_file(str(config), [])
     original_value = get_attribute_by_path(tested_path, parse(config_text))
-    assert original_value not in print_config_file(config, [tested_path])
+    assert original_value not in print_config_with_hidden_attrs(parse(config_text), [tested_path])
 
 
 def test_incremental_config_dialog(prepare_config_file, monkeypatch, capsys):
