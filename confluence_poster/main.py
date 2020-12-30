@@ -238,18 +238,35 @@ def create_config(local_only: Optional[bool] = typer.Option(False,
 
     home_config_location = xdg.xdg_config_home() / 'confluence_poster/config.toml'
 
-    # TODO: comments
-    all_params = (DialogParameter('author', required=False),
+    all_params = (DialogParameter('author',
+                                  comment="If the page was not updated by the username specified here, throw an error."
+                                          "\nIf this setting is omitted - username from auth section "
+                                          "is used for checks",
+                                  required=False),
                   # auth:
-                  DialogParameter('auth.confluence_url'),
-                  DialogParameter('auth.username'),
-                  DialogParameter('auth.password', required=False, hide_input=True),
-                  DialogParameter('auth.is_cloud', type=bool),
+                  DialogParameter('auth.confluence_url',
+                                  comment="URL of confluence instance"),
+                  DialogParameter('auth.username',
+                                  comment="Username for authentication in Confluence"),
+                  DialogParameter('auth.password',
+                                  comment="Password for authentication. May be supplied through runtime option or "
+                                          "environment",
+                                  required=False, hide_input=True),
+                  DialogParameter('auth.is_cloud',
+                                  comment="Whether the confluence instance is a cloud one",
+                                  type=bool),
                   # pages:
-                  DialogParameter('pages.default.page_space', required=False),
-                  DialogParameter('pages.page1.page_title'),
-                  DialogParameter('pages.page1.page_file'),
-                  DialogParameter('pages.page1.page_space', required=False)
+                  DialogParameter('pages.default.page_space',
+                                  comment="Space key (e.g. LOC for 'local-dev' space). If defined here - will be used "
+                                          "if a page does not redefine it",
+                                  required=False),
+                  DialogParameter('pages.page1.page_title',
+                                  comment='The title of the page'),
+                  DialogParameter('pages.page1.page_file',
+                                  comment="File containing page text"),
+                  DialogParameter('pages.page1.page_space',
+                                  comment="Key of the space with the page",
+                                  required=False)
                   )
     home_only_params = ('author', 'auth.confluence_url', 'auth.username', 'auth.password', 'auth.is_cloud')
     # To hide password in prompts
