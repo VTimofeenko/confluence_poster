@@ -1,4 +1,4 @@
-from tomlkit import dumps, parse
+from tomlkit import parse
 import io
 from pathlib import Path
 # noinspection PyProtectedMember
@@ -34,8 +34,8 @@ def create_config_file(tmp_path) -> Path:
 
 
 @pytest.mark.parametrize('path',
-                         product(['root', 'parent', 'parent.child', 'parent.child.nonexistent_child'],
-                                 ['foo', 'foz']),
+                         list(product(['root', 'parent', 'parent.child', 'parent.child.nonexistent_child'],
+                                      ['foo', 'foz'])),
                          ids=lambda tup: f'Look for {tup[1]} in {tup[0]}')
 def test_get_attribute_by_path(path):
     *_, location = path[0].split('.')

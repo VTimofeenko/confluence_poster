@@ -4,7 +4,7 @@ from pathlib import Path
 from typer.testing import CliRunner
 from tomlkit import parse
 import pytest
-from typing import List
+from typing import Iterable
 from itertools import product
 # noinspection PyProtectedMember
 from confluence_poster.config_wizard import _get_attribute_by_path as get_attribute_by_path
@@ -16,7 +16,7 @@ pytestmark = pytest.mark.offline
 runner = CliRunner()
 
 
-def setup_input(monkeypatch, cli_input: List[str]):
+def setup_input(monkeypatch, cli_input: Iterable[str]):
     """Macro to monkeypatch th"""
     monkeypatch.setattr('sys.stdin', io.StringIO("\n".join(cli_input) + "\n"))
 

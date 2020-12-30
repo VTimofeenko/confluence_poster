@@ -332,7 +332,7 @@ def create_config(local_only: Optional[bool] = typer.Option(False,
     while typer.confirm("Add more pages?", default=False):
         page_add_dialog(Path.cwd() / local_config_name)
 
-    typer.echo("Configuration wizard finished. Consider running the validate command to check the generated config")
+    typer.echo("Configuration wizard finished. Consider running the `validate` command to check the generated config")
 
 
 @app.callback()

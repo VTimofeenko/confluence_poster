@@ -1,15 +1,12 @@
 import typer
 from pathlib import Path
 from functools import reduce
-import toml
-from typing import List, Dict, Union, Any, Tuple, FrozenSet, Iterable, Callable
+from typing import Union, Any, Tuple, FrozenSet, Iterable, Callable
 from tomlkit import document, parse, table, dumps
 from tomlkit.parser import TOMLDocument
 from tomlkit.items import Table
 from dataclasses import dataclass
-from confluence_poster.poster_config import Auth, Page
 from copy import deepcopy
-from dataclasses import dataclass
 
 
 @dataclass
