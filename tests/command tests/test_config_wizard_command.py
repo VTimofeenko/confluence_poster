@@ -162,7 +162,7 @@ def test_prefilled_params(tmp_path):
 
 
 def test_dialog_home_directory_created(tmp_path, monkeypatch):
-    """Checks that XDG_HOME_CONFIG/confluence_poster directory is created if it does not exist"""
+    """Checks that XDG_CONFIG_HOME/confluence_poster directory is created if it does not exist"""
     new_home_config: Path = tmp_path / "new_home"  # new_home to override the fixture
     new_home_config.mkdir()
     monkeypatch.setenv("XDG_CONFIG_HOME", str(new_home_config))

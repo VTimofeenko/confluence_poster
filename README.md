@@ -89,7 +89,7 @@ configuration wizard which will guide you through the configuration.
 # Config format
 
 By default the confluence_poster tries to look for config file `config.toml` in the directory where it is invoked and in
-XDG_HOME_CONFIG. The config format is as follows:
+XDG_CONFIG_HOME. The config format is as follows:
 
 ```toml
 # If the page was not updated by the username specified here, throw an error.
