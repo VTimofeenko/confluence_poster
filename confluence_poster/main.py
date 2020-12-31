@@ -352,8 +352,8 @@ def create_config(
     answer = ""
     if not any([local_only, home_only]):
         typer.echo(
-            "Since neither --local-only nor --home-only were specified, wizard will guide you through creating "
-            f"config files in {home_config_location.parent} and {Path.cwd()}"
+            "Since neither '--local-only' nor '--home-only' were specified, wizard will guide you through creating "
+            f"config files in {home_config_location.parent}(XDG_CONFIG_HOME) and {Path.cwd()}(local directory)"
         )
 
         answer = typer.prompt(
