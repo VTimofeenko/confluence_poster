@@ -23,6 +23,7 @@ on:
       - '**/*.txt'
       - '**/*.drawio'
       - '**/*.jinja2'
+      - '**/*.yml'
   schedule:
     - cron: '38 7 * * 4'
 
