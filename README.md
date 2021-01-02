@@ -41,12 +41,12 @@ Posts the content of the pages.
 **Usage**:
 
 ```console
-$ confluence_poster post-page [OPTIONS]
+$ confluence_poster post-page [OPTIONS] [FILES]...
 ```
 
 **Options**:
 
-* `--upload-files PATH`: Files to upload as attachments to page.
+* `--upload-files`: Upload list of files
 * `--help`: Show this message and exit.
 
 ## `confluence_poster validate`
