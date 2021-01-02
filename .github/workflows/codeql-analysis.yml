@@ -17,8 +17,12 @@ on:
   pull_request:
     # The branches below must be a subset of the branches above
     branches: [ master ]
-    paths:
-      - '**/*.py'
+    # ignore misc files
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.txt'
+      - '**/*.drawio'
+      - '**/*.jinja2'
   schedule:
     - cron: '38 7 * * 4'
 
