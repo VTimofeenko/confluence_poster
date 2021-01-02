@@ -153,9 +153,10 @@ state = StateConfig()
 
 @app.command()
 def post_page(
-    upload_files: Optional[List[Path]] = typer.Option(
-        default=None, help="Files to upload as attachments to page."
-    )
+    upload_files: Optional[bool] = typer.Option(
+        False, "--upload-files", show_default=False, help="Upload list of files"
+    ),
+    files: Optional[List[Path]] = typer.Argument(None, help="List of files to upload"),
 ):
     """Posts the content of the pages."""
     report = Report(confluence_instance=state.confluence_instance)
@@ -224,7 +225,7 @@ def post_page(
         if page_id and upload_files:
             typer.echo("Uploading the files")
             if page == target_page:
-                for path in upload_files:
+                for path in files:
                     if path.is_file():
                         typer.echo(f"\tUploading file {path.name}")
                         state.confluence_instance.attach_file(

@@ -52,12 +52,18 @@ def gen_attachments(tmp_path):
     return result
 
 
-def test_upload_files_single_page_config(setup_page, gen_attachments):
+@pytest.mark.parametrize(
+    "file_count",
+    range(1, 10),
+    ids=lambda file_count: f"Upload {file_count} files to existing page",
+)
+def test_upload_files_single_page_config(setup_page, gen_attachments, file_count):
     """Tests uploading files to a page - should work"""
     page_id, config_file = setup_page
-    file_to_upload, filename = gen_attachments[0]
+    files_to_upload = [_[0] for _ in gen_attachments[:file_count]]
+    _, filename = gen_attachments[0]
 
-    result: Result = upload_files(config_file=config_file, other_args=[file_to_upload])
+    result: Result = upload_files(config_file=config_file, other_args=files_to_upload)
     assert result.exit_code == 0
     assert "Uploading the files" in result.stdout
     assert f"\tUploading file {filename}" in result.stdout
