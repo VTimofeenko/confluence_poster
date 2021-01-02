@@ -19,11 +19,6 @@ on:
     branches: [ master ]
     paths:
       - '**/*.py'
-    paths-ignore:
-      - '**/*.md'
-      - '**/*.txt'
-      - '**/*.drawio'
-      - '**/*.jinja2'
   schedule:
     - cron: '38 7 * * 4'
 
