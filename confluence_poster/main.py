@@ -12,7 +12,7 @@ from dataclasses import dataclass, field, astuple
 from requests.exceptions import ConnectionError
 from confluence_poster.main_helpers import check_last_updated_by, PostedPage
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 default_config_name = "config.toml"
 
 
