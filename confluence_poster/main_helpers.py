@@ -1,12 +1,15 @@
 import typer
 from atlassian import Confluence
+from dataclasses import dataclass, fields
+from confluence_poster.poster_config import Page
+from typing import Union
 
 """File that contains procedures used inside main.py's functions"""
 
 
 def check_last_updated_by(
     page_id: int, username_to_check: str, confluence_instance: Confluence
-) -> (bool, last_updated_by):
+) -> (bool, str):
     """Checks which user last updated `page_id`. If it's not `username_to_check` — return False
     :param page_id: ID of the page to check
     :param username_to_check: compare this username against the one that last updated the page
@@ -21,3 +24,10 @@ def check_last_updated_by(
         page_last_updated_by = page_last_updated_by["username"]
 
     return page_last_updated_by == username_to_check, page_last_updated_by
+
+
+@dataclass
+class PostedPage(Page):
+    """Merges independently set fields with the runtime-set fields"""
+
+    version_comment: Union[str, None] = None

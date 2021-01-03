@@ -86,11 +86,12 @@ class Config(PartialConfig):
                     if not isinstance(default_space, str) or default_space is None:
                         raise ValueError("default.page_space should be a string")
                 else:  # this is a page definition
-                    for prop in item_content:
+                    for prop in item_content:  # TODO: better validation
                         if not isinstance(item_content[prop], str):
-                            raise ValueError(
-                                f"{prop} property of a page is not a string"
-                            )
+                            if prop != "force_overwrite":
+                                raise ValueError(
+                                    f"{prop} property of a page is not a string"
+                                )
 
                     page = Page(
                         item_content.get("page_title", None),

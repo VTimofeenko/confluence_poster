@@ -1,7 +1,7 @@
 import toml
 from typer.testing import CliRunner, Result
 from functools import partial
-from typing import Callable, Union, List, Set, Iterable
+from typing import Callable, Union, List, Set, Iterable, Tuple
 from faker import Faker
 from confluence_poster.poster_config import Config, Page
 from atlassian import Confluence
@@ -69,7 +69,7 @@ def mk_tmp_file(
     return config_file
 
 
-def clone_local_config(other_config: str = real_confluence_config):
+def clone_local_config(other_config: str = real_confluence_config) -> partial:
     """Shorthand to copy the config to be used against local instance of confluence"""
     return partial(mk_tmp_file, config_to_clone=other_config)
 
@@ -181,12 +181,12 @@ def page_created(page_title: str, space: str = None) -> bool:
     )
 
 
-def get_pages_ids_from_stdout(stdout: str) -> Union[Set[int], Set]:
+def get_pages_ids_from_stdout(stdout: str) -> Union[Tuple[int], Tuple]:
     """Returns list of pages from stdout"""
     if result := re.findall("Created page #[0-9]+", stdout):
-        return set([_.split("#")[1] for _ in result])
+        return tuple([_.split("#")[1] for _ in result])
     else:
-        return set()
+        return tuple()
 
 
 def get_page_id_from_stdout(stdout: str) -> Union[int, None]:
@@ -225,7 +225,7 @@ def run_with_config(
     """Function that runs the default_run_cmd with supplied config and records the generated pages in the fixture"""
     result = default_run_cmd(config=config_file, *args, **kwargs)
     # This allows manipulating the set of the pages to be destroyed at the end
-    _created_pages = get_pages_ids_from_stdout(result.stdout)
+    _created_pages = set(get_pages_ids_from_stdout(result.stdout))
     if _created_pages:
         frame = currentframe()
         while True:
@@ -271,3 +271,19 @@ def run_with_config(
 
 def join_input(_input: Iterable) -> str:
     return "\n".join(_input) + "\n"
+
+
+def rewrite_page_file(page_file: Union[str, Path]) -> None:
+    """Re-generates content for the page file"""
+    if isinstance(page_file, str):
+        page_file = Path(page_file)
+    page_file.write_text(next(fake_content_generator))
+
+
+def replace_new_author(config_file, tmp_path):
+    return mk_tmp_file(
+        config_to_clone=config_file,
+        tmp_path=tmp_path,
+        key_to_update="author",
+        value_to_update=Faker().user_name(),
+    )
