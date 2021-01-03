@@ -1,4 +1,5 @@
 import typer
+from click import Choice
 from typing import Optional, List, Union, Tuple
 from pathlib import Path
 from logging import basicConfig, DEBUG
@@ -156,15 +157,49 @@ def post_page(
     upload_files: Optional[bool] = typer.Option(
         False, "--upload-files", show_default=False, help="Upload list of files"
     ),
+    version_comment: Optional[str] = typer.Option(
+        None,
+        "--version-comment",
+        show_default=False,
+        help="Provider version comment.",
+    ),
     files: Optional[List[Path]] = typer.Argument(None, help="List of files to upload"),
 ):
     """Posts the content of the pages."""
+
+    @dataclass
+    class PostedPage(Page):
+        version_comment: Union[str, None] = None
+
     report = Report(confluence_instance=state.confluence_instance)
     confluence = state.confluence_instance
-    target_page = state.config.pages[0]
+    posted_pages = [
+        PostedPage(_.page_title, _.page_file, _.page_space, _.parent_page_title)
+        for _ in state.config.pages
+    ]
+    target_page = posted_pages[0]
+
+    if len(posted_pages) > 1 and version_comment is not None:
+        apply_config = typer.prompt(
+            text=f"Multiple pages specified. Do you want to apply the comment to [A]ll pages, "
+            "[F]irst one or [N]ot apply it?",
+            type=Choice(choices=["A", "F", "N"], case_sensitive=False),
+            default="A",
+        ).lower()
+        if apply_config == "a":
+            for page in posted_pages:
+                page.version_comment = version_comment
+        elif apply_config == "f":
+            posted_pages[0].version_comment = version_comment
+        else:
+            for page in posted_pages:
+                page.version_comment = None
+    else:
+        # set the comment for the single page
+        posted_pages[0].version_comment = version_comment
 
     if upload_files:
-        if len(state.config.pages) > 1:
+        if len(posted_pages) > 1:
             typer.echo(
                 "Upload files are specified, but there are more than 1 pages in the config."
             )
@@ -177,7 +212,7 @@ def post_page(
                 typer.echo("Aborting.")
                 raise typer.Exit(1)
 
-    for page in state.config.pages:
+    for page in posted_pages:
         typer.echo(f"Looking for page '{page.page_title}'")
         if page_id := confluence.get_page_id(
             space=page.page_space, title=page.page_title
@@ -210,12 +245,18 @@ def post_page(
                     body=_.read(),
                     representation="wiki",
                     minor_edit=state.minor_edit,
+                    version_comment=page.version_comment,
                 )
                 report.updated_pages += [page]
         else:
             page_was_created, page_id = create_page(page=page, confluence=confluence)
             if page_was_created:
                 report.created_pages += [page]
+                if version_comment:
+                    typer.echo(
+                        "Page was created, but Confluence API does not support setting the version comment for"
+                        " page creation. The comment was not provided."
+                    )
             else:
                 typer.echo(f"Not creating page '{page.page_title}'")
                 report.unprocessed_pages += [

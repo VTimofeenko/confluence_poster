@@ -144,7 +144,7 @@ def generate_fake_page(tmp_path) -> (str, str, str):
     """Generates a title, fake content and the path to the temporary file in temporary path"""
     title = next(fake_title_generator)
     content = next(fake_content_generator)
-    filename = tmp_path / title.lower().replace(" ", "_")
+    filename = tmp_path / f'{title.lower().replace(" ", "_")}.confluencewiki'
     filename.write_text(content)
     return title, content, str(filename)
 
