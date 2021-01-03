@@ -13,6 +13,7 @@ class Page:
     page_file: str
     page_space: Union[str, None]
     parent_page_title: Union[str, None]
+    force_overwrite: Union[bool, None] = False
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Page):
@@ -96,6 +97,7 @@ class Config(PartialConfig):
                         item_content["page_file"],
                         item_content.get("page_space", None),
                         item_content.get("page_parent_title", None),
+                        item_content.get("force_overwrite", False),
                     )
                     self.__pages.append(page)
             else:
