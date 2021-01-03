@@ -6,7 +6,6 @@ from utils import (
     run_with_config,
     generate_local_config,
     join_input,
-    get_page_id_from_stdout,
     page_created,
 )
 from functools import partial
@@ -30,7 +29,7 @@ def test_force_create_pages(tmp_path, page_count):
     result = run_with_config(
         config_file=config_file,
         pre_args=["--force-create"],
-        input=join_input(("N", "Y") * page_count),
+        input=join_input(user_input=("N", "Y") * page_count),
     )
     assert result.exit_code == 0
     assert "Should it be created?" not in result.stdout  # flag overwrites the prompt

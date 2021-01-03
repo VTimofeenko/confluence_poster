@@ -1,5 +1,4 @@
 import pytest
-from typing import Union
 from typer.testing import CliRunner, Result
 from confluence_poster.main import app, state
 from utils import generate_run_cmd, run_with_config, generate_local_config, mk_fake_file
@@ -78,6 +77,7 @@ def test_multiple_pages_with_comment(apply_config_answer, tmp_path):
         "Y\n",
         other_args=["create_comment"],
     )
+    assert result.exit_code == 0
 
     for page in config.pages:
         # Regenerate content of page
@@ -94,6 +94,7 @@ def test_multiple_pages_with_comment(apply_config_answer, tmp_path):
         "Y\n",
         other_args=["update_comment"],
     )
+    assert result.exit_code == 0
     if apply_config_answer in {"A", ""}:
         for page in config.pages:
             assert (

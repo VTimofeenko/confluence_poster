@@ -173,16 +173,16 @@ def post_page(
     target_page = posted_pages[0]
 
     if len(posted_pages) > 1 and version_comment is not None:
-        apply_config = typer.prompt(
+        apply_version_comment_to = typer.prompt(
             text=f"Multiple pages specified. Do you want to apply the comment to [A]ll pages, "
             "[F]irst one or [N]ot apply it?",
             type=Choice(choices=["A", "F", "N"], case_sensitive=False),
             default="A",
         ).lower()
-        if apply_config == "a":
+        if apply_version_comment_to == "a":
             for page in posted_pages:
                 page.version_comment = version_comment
-        elif apply_config == "f":
+        elif apply_version_comment_to == "f":
             posted_pages[0].version_comment = version_comment
         else:
             for page in posted_pages:
@@ -483,7 +483,8 @@ def main(
         False,
         "--force",
         show_default=False,
-        help="Force overwrite the pages." " Applicable if the author is different.",
+        help="Force overwrite the pages. Skips all checks for different author of the updated page. "
+        "To set for individual pages you can specify field 'force_overwrite' in config",
     ),
     force_create: Optional[bool] = typer.Option(
         False,

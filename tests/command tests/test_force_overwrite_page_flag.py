@@ -1,17 +1,14 @@
 from typer.testing import CliRunner, Result
 import pytest
 from confluence_poster.main import app
-from pathlib import Path
 from confluence_poster.poster_config import Config
 from utils import (
     generate_run_cmd,
     run_with_config,
     mk_tmp_file,
-    fake_content_generator,
     rewrite_page_file,
     replace_new_author,
 )
-from faker import Faker
 from functools import partial
 from itertools import product
 

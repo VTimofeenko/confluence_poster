@@ -4,8 +4,6 @@ from utils import (
     run_with_config,
     confluence_instance,
     generate_local_config,
-    fake_title_generator,
-    fake_content_generator,
     get_pages_ids_from_stdout,
     generate_run_cmd,
 )
@@ -45,7 +43,7 @@ def setup_page(tmp_path, record_pages):
         runner = CliRunner()
         run_cmd = generate_run_cmd(runner=runner, app=app, default_args=["post-page"])
         result = run_with_config(
-            input=join_input(("Y", "N", "Y") * page_count),
+            input=join_input(user_input=("Y", "N", "Y") * page_count),
             config_file=config_file,
             record_pages=record_pages,
             default_run_cmd=run_cmd,

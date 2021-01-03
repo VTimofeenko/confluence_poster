@@ -1,7 +1,7 @@
 import toml
 from typer.testing import CliRunner, Result
 from functools import partial
-from typing import Callable, Union, List, Set, Iterable, Tuple
+from typing import Callable, Union, List, Iterable, Tuple
 from faker import Faker
 from confluence_poster.poster_config import Config, Page
 from atlassian import Confluence
@@ -14,7 +14,6 @@ real_confluence_config = (
     "local_config.toml"  # The config filename for testing against local instance
 )
 other_user_config = "local_config_other_user.toml"  # Config with a different user
-created_pages = set()
 
 if Path(real_confluence_config).exists():
     real_config = Config(real_confluence_config)
@@ -192,7 +191,7 @@ def get_pages_ids_from_stdout(stdout: str) -> Union[Tuple[int], Tuple]:
 def get_page_id_from_stdout(stdout: str) -> Union[int, None]:
     """Function to parse stdout and get the created page id"""
     if len(result := get_pages_ids_from_stdout(stdout)) == 1:
-        return result.pop()
+        return result[0]
     elif len(result) == 0:
         return None
     else:
@@ -269,15 +268,22 @@ def run_with_config(
     return result
 
 
-def join_input(_input: Iterable) -> str:
-    return "\n".join(_input) + "\n"
+def join_input(*args, user_input: Iterable = None) -> str:
+    if user_input is not None:
+        output = user_input
+    else:
+        output = args
+    return "\n".join(output) + "\n"
 
 
-def rewrite_page_file(page_file: Union[str, Path]) -> None:
+def rewrite_page_file(page_file: Union[str, Path]) -> str:
     """Re-generates content for the page file"""
     if isinstance(page_file, str):
         page_file = Path(page_file)
-    page_file.write_text(next(fake_content_generator))
+
+    new_text = next(fake_content_generator)
+    page_file.write_text(new_text)
+    return new_text
 
 
 def replace_new_author(config_file, tmp_path):
@@ -287,3 +293,8 @@ def replace_new_author(config_file, tmp_path):
         key_to_update="author",
         value_to_update=Faker().user_name(),
     )
+
+
+create_single_page_input = join_input(
+    "Y", "N", "Y"
+)  # sequence if inputs to create one page

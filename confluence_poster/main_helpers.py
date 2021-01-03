@@ -1,6 +1,5 @@
-import typer
 from atlassian import Confluence
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
 from confluence_poster.poster_config import Page
 from typing import Union
 
