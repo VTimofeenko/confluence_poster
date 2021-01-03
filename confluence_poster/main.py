@@ -10,6 +10,7 @@ from atlassian import Confluence
 from atlassian.errors import ApiError
 from dataclasses import dataclass, field
 from requests.exceptions import ConnectionError
+from main_helpers import check_last_updated_by
 
 __version__ = "1.2.0"
 default_config_name = "config.toml"
@@ -221,22 +222,19 @@ def post_page(
             typer.echo(f"Found page id #{page_id}")
 
             # If --force is supplied - we do not really care about who edited the page last
-            if not state.force:
-                page_last_updated_by = confluence.get_page_by_id(
-                    page_id, expand="version"
-                )["version"]["by"]
-                if confluence.api_version == "cloud":
-                    page_last_updated_by = page_last_updated_by[
-                        "email"
-                    ]  # pragma: no cover
-                else:
-                    page_last_updated_by = page_last_updated_by["username"]
-                if page_last_updated_by != state.config.author:
+            if not state.force or not page.force_overwrite:
+                updated_by_author, page_last_updated_by = check_last_updated_by(
+                    page_id=page_id,
+                    username_to_check=state.config.author,
+                    confluence_instance=confluence,
+                )
+                if not updated_by_author:
                     typer.echo(
                         f"Flag 'force' is not set and last author of page '{page.page_title}'"
                         f" is {page_last_updated_by}, not {state.config.author}. Skipping page"
                     )
                     continue
+
             with open(page.page_file, "r") as _:
                 typer.echo(f"Updating page #{page_id}")
                 confluence.update_existing_page(
