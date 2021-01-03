@@ -14,6 +14,10 @@ page_title = "Some page title"
 page_file = "some_file.confluencewiki"
 # If specified - overrides the default page_space
 page_space = "some_space_key"
+# If specified as "true" - username check is always skipped for this page
+force_overwrite = false
+# If specified - the page will be created without looking for a parent under specified parent
+page_parent_title = "Parent page title"
 
 [pages.page2]
 page_title = "Some other page title"

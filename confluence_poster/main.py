@@ -8,8 +8,9 @@ from confluence_poster.config_loader import load_config
 from confluence_poster.config_wizard import DialogParameter
 from atlassian import Confluence
 from atlassian.errors import ApiError
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, astuple
 from requests.exceptions import ConnectionError
+from confluence_poster.main_helpers import check_last_updated_by, PostedPage
 
 __version__ = "1.2.0"
 default_config_name = "config.toml"
@@ -166,30 +167,22 @@ def post_page(
     files: Optional[List[Path]] = typer.Argument(None, help="List of files to upload"),
 ):
     """Posts the content of the pages."""
-
-    @dataclass
-    class PostedPage(Page):
-        version_comment: Union[str, None] = None
-
     report = Report(confluence_instance=state.confluence_instance)
     confluence = state.confluence_instance
-    posted_pages = [
-        PostedPage(_.page_title, _.page_file, _.page_space, _.parent_page_title)
-        for _ in state.config.pages
-    ]
+    posted_pages = [PostedPage(*astuple(_)) for _ in state.config.pages]
     target_page = posted_pages[0]
 
     if len(posted_pages) > 1 and version_comment is not None:
-        apply_config = typer.prompt(
+        apply_version_comment_to = typer.prompt(
             text=f"Multiple pages specified. Do you want to apply the comment to [A]ll pages, "
             "[F]irst one or [N]ot apply it?",
             type=Choice(choices=["A", "F", "N"], case_sensitive=False),
             default="A",
         ).lower()
-        if apply_config == "a":
+        if apply_version_comment_to == "a":
             for page in posted_pages:
                 page.version_comment = version_comment
-        elif apply_config == "f":
+        elif apply_version_comment_to == "f":
             posted_pages[0].version_comment = version_comment
         else:
             for page in posted_pages:
@@ -221,22 +214,25 @@ def post_page(
             typer.echo(f"Found page id #{page_id}")
 
             # If --force is supplied - we do not really care about who edited the page last
-            if not state.force:
-                page_last_updated_by = confluence.get_page_by_id(
-                    page_id, expand="version"
-                )["version"]["by"]
-                if confluence.api_version == "cloud":
-                    page_last_updated_by = page_last_updated_by[
-                        "email"
-                    ]  # pragma: no cover
-                else:
-                    page_last_updated_by = page_last_updated_by["username"]
-                if page_last_updated_by != state.config.author:
+            if not (state.force or page.force_overwrite):
+                updated_by_author, page_last_updated_by = check_last_updated_by(
+                    page_id=page_id,
+                    username_to_check=state.config.author,
+                    confluence_instance=confluence,
+                )
+                if not updated_by_author:
                     typer.echo(
                         f"Flag 'force' is not set and last author of page '{page.page_title}'"
                         f" is {page_last_updated_by}, not {state.config.author}. Skipping page"
                     )
                     continue
+            else:
+                if state.force:
+                    typer.echo("Flag 'force' set globally.")
+                elif page.force_overwrite:
+                    typer.echo("Flag 'force overwrite' set on the page.")
+                typer.echo("Author name check skipped.")
+
             with open(page.page_file, "r") as _:
                 typer.echo(f"Updating page #{page_id}")
                 confluence.update_existing_page(
@@ -487,7 +483,8 @@ def main(
         False,
         "--force",
         show_default=False,
-        help="Force overwrite the pages." " Applicable if the author is different.",
+        help="Force overwrite the pages. Skips all checks for different author of the updated page. "
+        "To set for individual pages you can specify field 'force_overwrite' in config",
     ),
     force_create: Optional[bool] = typer.Option(
         False,

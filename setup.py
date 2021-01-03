@@ -27,6 +27,7 @@ setup(
         "requests",
         "xdg>=5.0.1",
         "tomlkit==0.7.0",
+        "click>=7.0.0",
     ],
     python_requires=">=3.8, <4",
     tests_require=["pytest", "pytest-cov", "faker"],

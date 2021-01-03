@@ -124,7 +124,7 @@ def test_page_section_not_dict(tmp_path):
 
 def test_page_definition_not_str(tmp_path):
     """Defines each field one by one as a non-str and tests that exception is thrown"""
-    for page_def in [_.name for _ in fields(Page)]:
+    for page_def in [_.name for _ in fields(Page) if _.name != "force_overwrite"]:
         config_file = mk_tmp_file(
             tmp_path, key_to_update=f"pages.page1.{page_def}", value_to_update=1
         )

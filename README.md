@@ -16,7 +16,7 @@ $ confluence_poster [OPTIONS] COMMAND [ARGS]...
 * `--page-title TEXT`: Override page title from config. Applicable if there is only one page.
 * `--parent-page-title TEXT`: Provide a parent title to search for. Applicable if there is only one page.
 * `--password TEXT`: Supply the password in command line.  [env var: CONFLUENCE_PASSWORD]
-* `--force`: Force overwrite the pages. Applicable if the author is different.
+* `--force`: Force overwrite the pages. Skips all checks for different author of the updated page. To set for individual pages you can specify field 'force_overwrite' in config
 * `--force-create`: Disable prompts to create pages. Script could still prompt for a parent page.
 * `--minor-edit`: Do not notify watchers of pages updates. Not enabled by default.
 * `--report`: Print report at the end of the run. Not enabled by default.
@@ -47,6 +47,7 @@ $ confluence_poster post-page [OPTIONS] [FILES]...
 **Options**:
 
 * `--upload-files`: Upload list of files
+* `--version-comment TEXT`: Provider version comment.
 * `--help`: Show this message and exit.
 
 ## `confluence_poster validate`
@@ -108,6 +109,10 @@ page_title = "Some page title"
 page_file = "some_file.confluencewiki"
 # If specified - overrides the default page_space
 page_space = "some_space_key"
+# If specified as "true" - username check is always skipped for this page
+force_overwrite = false
+# If specified - the page will be created without looking for a parent under specified parent
+page_parent_title = "Parent page title"
 
 [pages.page2]
 page_title = "Some other page title"
@@ -136,5 +141,5 @@ There are shell completions for bash and zsh as well as a sample of
 # See also
 
 * [Vim confluencewiki syntax](https://www.vim.org/scripts/script.php?script_id=1994)
-* [Paste confluence image in vim](https://github.com/SabbathHex/confluencewiki-img-paste.vim)
+* [Paste confluence image in vim](https://github.com/VTimofeenko/confluencewiki-img-paste.vim)
 * [Atlassian python API](https://atlassian-python-api.readthedocs.io/en/latest/) (On [Github](https://github.com/atlassian-api/atlassian-python-api))

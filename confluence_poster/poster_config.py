@@ -13,6 +13,7 @@ class Page:
     page_file: str
     page_space: Union[str, None]
     parent_page_title: Union[str, None]
+    force_overwrite: Union[bool, None] = False
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Page):
@@ -85,17 +86,19 @@ class Config(PartialConfig):
                     if not isinstance(default_space, str) or default_space is None:
                         raise ValueError("default.page_space should be a string")
                 else:  # this is a page definition
-                    for prop in item_content:
+                    for prop in item_content:  # TODO: better validation
                         if not isinstance(item_content[prop], str):
-                            raise ValueError(
-                                f"{prop} property of a page is not a string"
-                            )
+                            if prop != "force_overwrite":
+                                raise ValueError(
+                                    f"{prop} property of a page is not a string"
+                                )
 
                     page = Page(
                         item_content.get("page_title", None),
                         item_content["page_file"],
                         item_content.get("page_space", None),
                         item_content.get("page_parent_title", None),
+                        item_content.get("force_overwrite", False),
                     )
                     self.__pages.append(page)
             else:
