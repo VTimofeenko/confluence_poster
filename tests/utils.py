@@ -1,7 +1,7 @@
 import toml
 from typer.testing import CliRunner, Result
 from functools import partial
-from typing import Callable, Union, List, Set
+from typing import Callable, Union, List, Set, Iterable
 from faker import Faker
 from confluence_poster.poster_config import Config, Page
 from atlassian import Confluence
@@ -267,3 +267,7 @@ def run_with_config(
             ), f"Page {page_title} has incorrect content"
 
     return result
+
+
+def join_input(_input: Iterable) -> str:
+    return "\n".join(_input) + "\n"
