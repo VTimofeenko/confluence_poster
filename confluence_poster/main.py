@@ -3,7 +3,7 @@ from click import Choice
 from typing import Optional, List, Union, Tuple
 from pathlib import Path
 from logging import basicConfig, DEBUG
-from confluence_poster.poster_config import Config, Page
+from confluence_poster.poster_config import Config, Page, AllowedFileFormat
 from confluence_poster.config_loader import load_config
 from confluence_poster.config_wizard import DialogParameter
 from atlassian import Confluence
@@ -163,6 +163,13 @@ def post_page(
         "--version-comment",
         show_default=False,
         help="Provider version comment.",
+    ),
+    file_format: Optional[AllowedFileFormat] = typer.Option(
+        AllowedFileFormat.none,
+        show_default=False,
+        help="File format of the file with the page content. "
+        "If provided at runtime - can only be applied to a single page. "
+        "If set to 'None'(default) - script will try to guess it during the run.",
     ),
     files: Optional[List[Path]] = typer.Argument(None, help="List of files to upload"),
 ):

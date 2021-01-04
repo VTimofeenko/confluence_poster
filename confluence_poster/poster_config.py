@@ -5,6 +5,15 @@ from typing import Union
 from operator import attrgetter
 from itertools import groupby
 from collections import UserDict
+from marshmallow import Schema, fields, validate
+from enum import Enum
+
+
+class AllowedFileFormat(str, Enum):
+    confluencewiki = "confluencewiki"
+    markdown = "markdown"
+    html = "html"
+    none = None
 
 
 @dataclass
@@ -12,8 +21,7 @@ class Page:
     page_title: str
     page_file: str
     page_space: Union[str, None]
-    parent_page_title: Union[str, None]
-    force_overwrite: Union[bool, None] = False
+    parent_page_title: Union[str, None] = None
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Page):
@@ -21,6 +29,22 @@ class Page:
         return (self.page_title == other.page_title) and (
             self.page_space == other.page_space
         )
+
+    page_file_format: Union[str, None] = None
+    force_overwrite: Union[bool, None] = False
+
+
+class PageSchema(Schema):
+    page_title = fields.Str()
+    page_file = fields.Str()
+    page_space = fields.Str()
+    parent_page_title = fields.Str(missing=None)
+    page_file_format = fields.Str(
+        default=None,
+        missing=None,
+        validate=validate.OneOf([_.value for _ in AllowedFileFormat]),
+    )
+    force_overwrite = fields.Boolean(default=False)
 
 
 @dataclass
@@ -94,11 +118,12 @@ class Config(PartialConfig):
                                 )
 
                     page = Page(
-                        item_content.get("page_title", None),
-                        item_content["page_file"],
-                        item_content.get("page_space", None),
-                        item_content.get("page_parent_title", None),
-                        item_content.get("force_overwrite", False),
+                        page_title=item_content.get("page_title", None),
+                        page_file=item_content["page_file"],
+                        page_file_format=item_content.get("page_file_format", None),
+                        page_space=item_content.get("page_space", None),
+                        parent_page_title=item_content.get("page_parent_title", None),
+                        force_overwrite=item_content.get("force_overwrite", False),
                     )
                     self.__pages.append(page)
             else:

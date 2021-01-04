@@ -1,7 +1,8 @@
 from atlassian import Confluence
 from dataclasses import dataclass
-from confluence_poster.poster_config import Page
+from confluence_poster.poster_config import Page, AllowedFileFormat
 from typing import Union
+from pathlib import Path
 
 """File that contains procedures used inside main.py's functions"""
 
@@ -30,3 +31,30 @@ class PostedPage(Page):
     """Merges independently set fields with the runtime-set fields"""
 
     version_comment: Union[str, None] = None
+
+
+def guess_file_format(page_file: str) -> AllowedFileFormat:
+    """Attempts to guess the file format from the page file by the file extension.
+    If the extension is unknown raises an error"""
+    md_file_formats = {
+        ".markdown",
+        ".mdown",
+        ".mkdn",
+        ".md",
+        ".mkd",
+        ".mdwn",
+        ".mdtxt",
+        ".mdtext",
+        ".text",
+        ".Rmd",
+    }
+    cw_file_formats = {".confluencewiki", ".wiki"}
+    html_file_formats = {".html"}
+    if (suffix := Path(page_file).suffix) in md_file_formats:
+        return AllowedFileFormat.markdown
+    elif suffix in cw_file_formats:
+        return AllowedFileFormat.confluencewiki
+    elif suffix in html_file_formats:
+        return AllowedFileFormat.html
+    else:
+        raise ValueError(f"File format of file {page_file} could not be guessed.")
