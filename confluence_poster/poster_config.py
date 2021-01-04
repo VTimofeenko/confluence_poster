@@ -5,7 +5,7 @@ from typing import Union
 from operator import attrgetter
 from itertools import groupby
 from collections import UserDict
-from marshmallow import Schema, fields, validate
+from marshmallow import Schema, fields, validate, ValidationError
 from enum import Enum
 
 
@@ -13,7 +13,7 @@ class AllowedFileFormat(str, Enum):
     confluencewiki = "confluencewiki"
     markdown = "markdown"
     html = "html"
-    none = None
+    none = "None"
 
 
 @dataclass
@@ -30,8 +30,15 @@ class Page:
             self.page_space == other.page_space
         )
 
-    page_file_format: Union[str, None] = None
+    page_file_format: AllowedFileFormat = AllowedFileFormat.none
     force_overwrite: Union[bool, None] = False
+
+
+class AllowedFileFormatField(fields.Field):
+    def _deserialize(self, value, attr, data, **kwargs):
+        if not isinstance(value, AllowedFileFormat):
+            raise ValidationError(f"Invalid value for field: {value}")
+        return value.value
 
 
 class PageSchema(Schema):
@@ -39,10 +46,13 @@ class PageSchema(Schema):
     page_file = fields.Str()
     page_space = fields.Str()
     parent_page_title = fields.Str(missing=None)
-    page_file_format = fields.Str(
-        default=None,
-        missing=None,
-        validate=validate.OneOf([_.value for _ in AllowedFileFormat]),
+    # page_file_format = fields.Str(
+    #     default=None,
+    #     missing=None,
+    #     validate=validate.OneOf([_.value for _ in AllowedFileFormat]),
+    # )
+    page_file_format = AllowedFileFormatField(
+        default=AllowedFileFormat.none, missing=AllowedFileFormat.none
     )
     force_overwrite = fields.Boolean(default=False)
 
@@ -120,7 +130,9 @@ class Config(PartialConfig):
                     page = Page(
                         page_title=item_content.get("page_title", None),
                         page_file=item_content["page_file"],
-                        page_file_format=item_content.get("page_file_format", None),
+                        page_file_format=AllowedFileFormat(
+                            item_content.get("page_file_format", "None")
+                        ),
                         page_space=item_content.get("page_space", None),
                         parent_page_title=item_content.get("page_parent_title", None),
                         force_overwrite=item_content.get("force_overwrite", False),

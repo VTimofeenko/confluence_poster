@@ -56,3 +56,8 @@ def setup_page(tmp_path, record_pages):
         return config_file, page_list
 
     return _create_pages
+
+
+@pytest.fixture(scope="function")
+def make_one_page_config(tmp_path):
+    return generate_local_config(tmp_path, pages=1)

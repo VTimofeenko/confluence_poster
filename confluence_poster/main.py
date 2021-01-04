@@ -10,7 +10,12 @@ from atlassian import Confluence
 from atlassian.errors import ApiError
 from dataclasses import dataclass, field, astuple
 from requests.exceptions import ConnectionError
-from confluence_poster.main_helpers import check_last_updated_by, PostedPage
+from confluence_poster.main_helpers import (
+    check_last_updated_by,
+    PostedPage,
+    guess_file_format,
+    get_representation_for_format,
+)
 
 __version__ = "1.3.0"
 default_config_name = "config.toml"
@@ -138,7 +143,9 @@ def create_page(page: Page, confluence: Confluence) -> (bool, Union[int, None]):
                 title=page.page_title,
                 body=_.read(),
                 parent_id=parent_id,
-                representation="wiki",
+                representation=get_representation_for_format(
+                    page.page_file_format
+                ).value,
             )
             page_id = response["id"]
             typer.echo(
@@ -166,6 +173,7 @@ def post_page(
     ),
     file_format: Optional[AllowedFileFormat] = typer.Option(
         AllowedFileFormat.none,
+        "--file-format",
         show_default=False,
         help="File format of the file with the page content. "
         "If provided at runtime - can only be applied to a single page. "
@@ -198,6 +206,16 @@ def post_page(
         # set the comment for the single page
         posted_pages[0].version_comment = version_comment
 
+    # file format check
+    if len(posted_pages) > 1 and file_format is not AllowedFileFormat.none:
+        typer.echo(
+            "File format cannot be used for cases when there are more than 1 pages in the config. "
+            "Consider adding it to the config file."
+        )
+        raise typer.Exit(1)
+
+    posted_pages[0].page_file_format = file_format
+
     if upload_files:
         if len(posted_pages) > 1:
             typer.echo(
@@ -213,6 +231,21 @@ def post_page(
                 raise typer.Exit(1)
 
     for page in posted_pages:
+        if page.page_file_format is AllowedFileFormat.none:
+            typer.echo(
+                f"File format for page {page.page_title} not specified. Trying to determine it..."
+            )
+            try:
+                guessed_format = guess_file_format(page.page_file)
+            except ValueError as e:
+                typer.echo(
+                    "Could not guess the file format. Consider specifying it manually. "
+                    "See --help for information",
+                    err=True,
+                )
+                raise e
+            page.page_file_format = guessed_format
+
         typer.echo(f"Looking for page '{page.page_title}'")
         if page_id := confluence.get_page_id(
             space=page.page_space, title=page.page_title
@@ -246,7 +279,9 @@ def post_page(
                     page_id=page_id,
                     title=page.page_title,
                     body=_.read(),
-                    representation="wiki",
+                    representation=get_representation_for_format(
+                        page.page_file_format
+                    ).value,
                     minor_edit=state.minor_edit,
                     version_comment=page.version_comment,
                 )

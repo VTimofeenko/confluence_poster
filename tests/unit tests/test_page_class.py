@@ -1,4 +1,9 @@
-from confluence_poster.poster_config import Page, PageSchema
+from confluence_poster.poster_config import (
+    Page,
+    PageSchema,
+    AllowedFileFormat,
+    AllowedFileFormatField,
+)
 from marshmallow import ValidationError
 from dataclasses import asdict
 import pytest
@@ -8,10 +13,11 @@ pytestmark = pytest.mark.offline
 
 @pytest.mark.parametrize(
     "file_format",
-    ["confluencewiki", "markdown", "html", None],
+    ["confluencewiki", "markdown", "html", "None"],
     ids=lambda f_format: f"'{f_format}' is specified for the page",
 )
 def test_file_format_supported(file_format):
+    file_format = AllowedFileFormat(file_format)
     p = Page(
         page_title="Title",
         page_file="/tmp/file.confluencewiki",
@@ -28,7 +34,7 @@ def test_file_format_default():
         page_file="/tmp/file.confluencewiki",
         page_space="LOC",
     )
-    assert p.page_file_format is None
+    assert p.page_file_format.value is "None"
 
 
 def test_file_format_not_str():
@@ -45,6 +51,7 @@ def test_file_format_not_str():
 
 def test_file_format_different_str():
     with pytest.raises(ValidationError):
+        # noinspection PyTypeChecker
         _ = Page(
             page_title="Title",
             page_file="/tmp/file.confluencewiki",

@@ -166,7 +166,10 @@ def generate_local_config(
             filename=str(new_config),
             config_to_clone=new_config,
             key_to_update=f"pages.page{page_number+1}",
-            value_to_update={"page_title": title, "page_file": filename},
+            value_to_update={
+                "page_title": title,
+                "page_file": f"{filename}",
+            },
         )
     return new_config, Config(str(new_config))
 

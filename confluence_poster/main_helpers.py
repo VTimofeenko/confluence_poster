@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from confluence_poster.poster_config import Page, AllowedFileFormat
 from typing import Union
 from pathlib import Path
+from enum import Enum
 
 """File that contains procedures used inside main.py's functions"""
 
@@ -58,3 +59,21 @@ def guess_file_format(page_file: str) -> AllowedFileFormat:
         return AllowedFileFormat.html
     else:
         raise ValueError(f"File format of file {page_file} could not be guessed.")
+
+
+class Representation(Enum):
+    wiki = "wiki"
+    editor = "editor"
+
+
+def get_representation_for_format(file_format: AllowedFileFormat) -> Representation:
+    if file_format == AllowedFileFormat.markdown:
+        raise ValueError("Posting direct markdown is not supported")
+    elif file_format == AllowedFileFormat.html:
+        return Representation.editor
+    elif file_format == AllowedFileFormat.confluencewiki:
+        return Representation.wiki
+    else:
+        raise ValueError(
+            f"Could not determine representation value for {file_format}. This is probably a bug."
+        )
