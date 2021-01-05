@@ -1,9 +1,10 @@
 from atlassian import Confluence
-from dataclasses import dataclass
-from confluence_poster.poster_config import Page, AllowedFileFormat
-from typing import Union
+from dataclasses import dataclass, field
+from confluence_poster.poster_config import Page, AllowedFileFormat, Config
+from typing import Union, Callable, List
 from pathlib import Path
 from enum import Enum
+from typer import echo
 
 """File that contains procedures used inside main.py's functions"""
 
@@ -77,3 +78,24 @@ def get_representation_for_format(file_format: AllowedFileFormat) -> Representat
         raise ValueError(
             f"Could not determine representation value for {file_format}. This is probably a bug."
         )
+
+
+@dataclass
+class StateConfig:
+    """Holds the shared state between typer commands"""
+
+    force: bool = False
+    debug: bool = False
+    confluence_instance: Union[None, Confluence] = None
+    config: Union[None, Config] = None
+    minor_edit: bool = False
+    print_report: bool = False
+    force_create: bool = False
+    created_pages: List[int] = field(default_factory=list)
+    print_function: Callable = echo
+
+
+# noinspection PyUnusedLocal
+def suppressed_echo(*args, **kwargs):
+    """To be used if quiet is passed"""
+    pass

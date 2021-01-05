@@ -3,7 +3,7 @@ from click import Choice
 from typing import Optional, List, Union, Tuple
 from pathlib import Path
 from logging import basicConfig, DEBUG
-from confluence_poster.poster_config import Config, Page, AllowedFileFormat
+from confluence_poster.poster_config import Page, AllowedFileFormat
 from confluence_poster.config_loader import load_config
 from confluence_poster.config_wizard import DialogParameter
 from atlassian import Confluence
@@ -15,7 +15,10 @@ from confluence_poster.main_helpers import (
     PostedPage,
     guess_file_format,
     get_representation_for_format,
+    StateConfig,
+    suppressed_echo,
 )
+from confluence_poster.convert_markdown_utils import post_to_convert_api
 
 __version__ = "1.3.0"
 default_config_name = "config.toml"
@@ -37,20 +40,6 @@ def get_page_url(
         return page_link
     else:
         return None
-
-
-@dataclass
-class StateConfig:
-    """Holds the shared state between typer commands"""
-
-    force: bool = False
-    debug: bool = False
-    confluence_instance: Union[None, Confluence] = None
-    config: Union[None, Config] = None
-    minor_edit: bool = False
-    print_report: bool = False
-    force_create: bool = False
-    created_pages: List[int] = field(default_factory=list)
 
 
 @dataclass
@@ -87,23 +76,23 @@ def create_page(page: Page, confluence: Confluence) -> (bool, Union[int, None]):
 
     def find_parent(_parent_name: str, space: str) -> Union[int, None]:
         """Helper function to locate the parent page. Returns page id. Returns None if page is not found"""
-        typer.echo(f"Looking for the parent page with title {_parent_name}")
+        state.print_function(f"Looking for the parent page with title {_parent_name}")
         if parent_page := confluence.get_page_by_title(
             space=space, title=_parent_name, expand=""
         ):
             # according to Atlassian REST API reference, '_links' is a legitimate way to access links
             parent_link = get_page_url(_parent_name, space, confluence)
             _parent_id = parent_page["id"]
-            typer.echo(
+            state.print_function(
                 f"Found page #{_parent_id}, called {_parent_name}. URL is:\n{parent_link}"
             )
             return _parent_id
         else:
-            typer.echo(f"Parent page '{_parent_name}' not found")
+            state.print_function(f"Parent page '{_parent_name}' not found")
             return None
 
     # Page does not exist. Confluence API reports it itself
-    typer.echo(f"Page '{page.page_title}' not found")
+    state.print_function(f"Page '{page.page_title}' not found")
     parent_id = None
     if state.force_create or typer.confirm("Should it be created?", default=True):
         if not page.parent_page_title:
@@ -124,7 +113,7 @@ def create_page(page: Page, confluence: Confluence) -> (bool, Union[int, None]):
                 ):
                     return False, None
         else:
-            typer.echo(
+            state.print_function(
                 f"Creating under the specified parent page {page.parent_page_title}"
             )
             parent_id = find_parent(page.parent_page_title, page.page_space)
@@ -136,7 +125,7 @@ def create_page(page: Page, confluence: Confluence) -> (bool, Union[int, None]):
                 return False, None
 
         with open(page.page_file, "r") as _:
-            typer.echo("Creating page")
+            state.print_function("Creating page")
 
             response = confluence.create_page(
                 space=page.page_space,
@@ -158,6 +147,33 @@ def create_page(page: Page, confluence: Confluence) -> (bool, Union[int, None]):
 
 app = typer.Typer()
 state = StateConfig()
+
+
+@app.command()
+def convert_markdown(
+    use_confluence_converter: Optional[bool] = typer.Option(
+        True,
+        "--use-confluence-converter",
+        show_default=False,
+        help="Use built-in Confluence converter. Note: uses Confluence private API",
+    )
+):
+    """Converts single page text from markdown to html representation (aka "editor"). Prints the converted text.
+    Implies running the utility with --quiet."""
+    confluence = state.confluence_instance
+    if len(state.config.pages) > 1:
+        typer.echo(
+            "This command supports converting only one page at a time.", err=True
+        )
+        raise typer.Exit(1)
+
+    if use_confluence_converter:
+        typer.echo(
+            "Using the converter built into Confluence which is labeled as private API. "
+            "Consider using external tool",
+            err=True,
+        )
+        typer.echo(post_to_convert_api(confluence, " * one\n * two"))
 
 
 @app.command()
@@ -232,7 +248,7 @@ def post_page(
 
     for page in posted_pages:
         if page.page_file_format is AllowedFileFormat.none:
-            typer.echo(
+            state.print_function(
                 f"File format for page {page.page_title} not specified. Trying to determine it..."
             )
             try:
@@ -246,12 +262,12 @@ def post_page(
                 raise e
             page.page_file_format = guessed_format
 
-        typer.echo(f"Looking for page '{page.page_title}'")
+        state.print_function(f"Looking for page '{page.page_title}'")
         if page_id := confluence.get_page_id(
             space=page.page_space, title=page.page_title
         ):
             # Page exists
-            typer.echo(f"Found page id #{page_id}")
+            state.print_function(f"Found page id #{page_id}")
 
             # If --force is supplied - we do not really care about who edited the page last
             if not (state.force or page.force_overwrite):
@@ -261,20 +277,20 @@ def post_page(
                     confluence_instance=confluence,
                 )
                 if not updated_by_author:
-                    typer.echo(
+                    state.print_function(
                         f"Flag 'force' is not set and last author of page '{page.page_title}'"
                         f" is {page_last_updated_by}, not {state.config.author}. Skipping page"
                     )
                     continue
             else:
                 if state.force:
-                    typer.echo("Flag 'force' set globally.")
+                    state.print_function("Flag 'force' set globally.")
                 elif page.force_overwrite:
-                    typer.echo("Flag 'force overwrite' set on the page.")
-                typer.echo("Author name check skipped.")
+                    state.print_function("Flag 'force overwrite' set on the page.")
+                state.print_function("Author name check skipped.")
 
             with open(page.page_file, "r") as _:
-                typer.echo(f"Updating page #{page_id}")
+                state.print_function(f"Updating page #{page_id}")
                 confluence.update_existing_page(
                     page_id=page_id,
                     title=page.page_title,
@@ -291,7 +307,7 @@ def post_page(
             if page_was_created:
                 report.created_pages += [page]
                 if version_comment:
-                    typer.echo(
+                    state.print_function(
                         "Page was created, but Confluence API does not support setting the version comment for"
                         " page creation. The comment was not provided."
                     )
@@ -306,11 +322,11 @@ def post_page(
             if page == target_page:
                 for path in files:
                     if path.is_file():
-                        typer.echo(f"\tUploading file {path.name}")
+                        state.print_function(f"\tUploading file {path.name}")
                         state.confluence_instance.attach_file(
                             str(path), name=path.name, page_id=page_id
                         )
-                        typer.echo(f"\tSubmitted file {path.name}")
+                        state.print_function(f"\tSubmitted file {path.name}")
                 typer.echo("Done uploading files")
 
     typer.echo("Finished processing pages")
@@ -332,22 +348,24 @@ def validate(
     """Validates the provided settings. If 'online' is true - tries to fetch the space from the config using the
     supplied credentials."""
     if online:
-        typer.echo("Validating settings against the Confluence instance from config")
+        state.print_function(
+            "Validating settings against the Confluence instance from config"
+        )
         try:
             space_key = state.config.pages[0].page_space
-            typer.echo(f"Trying to get {space_key}...")
+            state.print_function(f"Trying to get {space_key}...")
             space_id = state.confluence_instance.get_space(space_key).get("id")
         except ConnectionError:
-            typer.echo(
+            state.print_function(
                 f"Could not connect to {state.config.auth.url}. Make sure it is correct"
             )
             raise typer.Abort(1)
         except ApiError as e:
-            typer.echo(f"Got an API error, details: {e.reason}")
+            state.print_function(f"Got an API error, details: {e.reason}")
             raise typer.Abort(1)
         else:
-            typer.echo(f"Got space id #{space_id}.")
-    typer.echo("Validation successful")
+            state.print_function(f"Got space id #{space_id}.")
+    state.print_function("Validation successful")
     return
 
 
@@ -427,11 +445,13 @@ def create_config(
     page_add_dialog = partial(page_add_dialog, config_print_function=_print_config_file)
 
     # Initial prompt
-    typer.echo("Starting config wizard.")
-    typer.echo("This wizard will guide you through creating the configuration files.")
+    state.print_function("Starting config wizard.")
+    state.print_function(
+        "This wizard will guide you through creating the configuration files."
+    )
     answer = ""
     if not any([local_only, home_only]):
-        typer.echo(
+        state.print_function(
             "Since neither '--local-only' nor '--home-only' were specified, wizard will guide you through creating "
             f"config files in {home_config_location.parent}(XDG_CONFIG_HOME) and {Path.cwd()}(local directory)"
         )
@@ -460,7 +480,9 @@ def create_config(
 
     if home_only:
         # If --home-only is specified - no need to create another one in local folder
-        typer.echo("--home-only specified, not attempting to create any more configs.")
+        state.print_function(
+            "--home-only specified, not attempting to create any more configs."
+        )
         raise typer.Exit()
 
     if not local_only:
@@ -473,7 +495,7 @@ def create_config(
             raise typer.Exit()
 
     # Create config in current working directory
-    typer.echo("Creating config in local directory.")
+    state.print_function("Creating config in local directory.")
     local_config_name = typer.prompt(
         "Please provide the name of local config", type=str, default=default_config_name
     )
@@ -553,11 +575,24 @@ def main(
         show_default=False,
         help="Enable debug logging. " "Not enabled by default.",
     ),
+    quiet: Optional[bool] = typer.Option(
+        False,
+        "--quiet",
+        show_default=False,
+        help="Suppresses certain output.",
+    ),
 ):
     """Supplementary script for writing confluence wiki articles in
     vim. Uses information from the config to post the article content to confluence.
     """
-    typer.echo("Starting up confluence_poster")
+    if ctx.invoked_subcommand == "convert-markdown":
+        quiet = True
+
+    if quiet:
+        state.print_function = suppressed_echo
+
+    state.print_function("Starting up confluence_poster")
+
     if debug:
         from pprint import pprint
 
@@ -577,7 +612,7 @@ def main(
         state.print_report = report
         state.minor_edit = minor_edit
 
-        typer.echo("Reading config")
+        state.print_function("Reading config")
         try:
             confluence_config = load_config(config)
         except FileNotFoundError as e:
