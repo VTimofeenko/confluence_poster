@@ -60,11 +60,13 @@ def determine_location(
     always_echo = state.always_print_function
 
     if create_in_root:
-        echo("--create_in_root specified, creating in root")
+        echo(f"Will create the page in root of space {page.page_space}")
         return LocationResult(True, None)
 
     if page.parent_page_title:
-        echo(f"Creating under the specified parent page '{page.parent_page_title}'")
+        echo(
+            f"Will create the page under the specified parent page '{page.parent_page_title}'"
+        )
         parent_page_id = _find_parent(
             parent_name=page.parent_page_title, space=page.page_space, state=state
         )

@@ -112,7 +112,7 @@ def post_page(
     create_in_space_root: Optional[bool] = typer.Option(
         False,
         "--create-in-space-root",
-        help="Automatically create the page in space root",
+        help="Create the page in space root",
     ),
     file_format: Optional[AllowedFileFormat] = typer.Option(
         AllowedFileFormat.none,
@@ -182,7 +182,7 @@ def post_page(
                 guessed_format = guess_file_format(page.page_file)
             except ValueError as e:
                 typer.echo(
-                    "Could not guess theproceed to create file format. Consider specifying it manually. "
+                    "Could not guess the file format. Consider specifying it manually. "
                     "See --help for information",
                     err=True,
                 )

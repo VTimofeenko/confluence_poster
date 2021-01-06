@@ -32,9 +32,9 @@ def test_print_function(capsys, quiet):
     "filter_mode",
     (None, True, False),
     ids=(
-        "filter_mode is default -> prompt works",
+        "filter_mode is default -> prompt and confirm work",
         "filter_mode is true -> Exception",
-        "filter_mode is false -> prompt works",
+        "filter_mode is false -> prompt and confirm work",
     ),
 )
 def test_prompt_function(monkeypatch, filter_mode):
@@ -43,11 +43,15 @@ def test_prompt_function(monkeypatch, filter_mode):
         s.filter_mode = filter_mode
     else:
         assert not s.filter_mode
-    setup_input(monkeypatch, cli_input="A")
+    setup_input(monkeypatch, cli_input=("Y", "Y"))
 
     if s.filter_mode:
         with pytest.raises(Exception):
             s.prompt_function("Prompt?")
+        with pytest.raises(Exception):
+            s.confirm_function("Prompt?")
     else:
         _ = s.prompt_function("Prompt?")
-        assert _ == "A"
+        assert _ == "Y"
+        _ = s.confirm_function("Prompt?")
+        assert _
