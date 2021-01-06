@@ -22,6 +22,7 @@ class Page:
     page_file: str
     page_space: Union[str, None]
     parent_page_title: Union[str, None] = None
+    _page_text: str = ""
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Page):
@@ -29,6 +30,17 @@ class Page:
         return (self.page_title == other.page_title) and (
             self.page_space == other.page_space
         )
+
+    @property
+    def page_text(self) -> str:
+        if self._page_text == "":
+            if (_file := Path(self.page_file)).exists():
+                self._page_text = Path(self.page_file).read_text()
+        return self._page_text
+
+    @page_text.setter
+    def page_text(self, value: str):
+        self._page_text = value
 
     page_file_format: AllowedFileFormat = AllowedFileFormat.none
     force_overwrite: Union[bool, None] = False
@@ -46,11 +58,7 @@ class PageSchema(Schema):
     page_file = fields.Str()
     page_space = fields.Str()
     parent_page_title = fields.Str(missing=None)
-    # page_file_format = fields.Str(
-    #     default=None,
-    #     missing=None,
-    #     validate=validate.OneOf([_.value for _ in AllowedFileFormat]),
-    # )
+    _page_text = fields.Str()
     page_file_format = AllowedFileFormatField(
         default=AllowedFileFormat.none, missing=AllowedFileFormat.none
     )

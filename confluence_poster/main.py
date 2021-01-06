@@ -173,7 +173,11 @@ def convert_markdown(
             "Consider using external tool",
             err=True,
         )
-        typer.echo(post_to_convert_api(confluence, " * one\n * two"))
+        typer.echo(post_to_convert_api(confluence, state.config.pages[0].page_text))
+    typer.echo(
+        "Submit the converted text using `confluence_poster post-page --file-format html`",
+        err=True,
+    )
 
 
 @app.command()
@@ -590,6 +594,8 @@ def main(
 
     if quiet:
         state.print_function = suppressed_echo
+    else:
+        state.print_function = typer.echo
 
     state.print_function("Starting up confluence_poster")
 

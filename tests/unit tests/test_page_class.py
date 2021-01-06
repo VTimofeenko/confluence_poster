@@ -1,12 +1,14 @@
+from pathlib import Path
+from marshmallow import ValidationError
+from dataclasses import asdict
+import pytest
+
 from confluence_poster.poster_config import (
     Page,
     PageSchema,
     AllowedFileFormat,
     AllowedFileFormatField,
 )
-from marshmallow import ValidationError
-from dataclasses import asdict
-import pytest
 
 pytestmark = pytest.mark.offline
 
@@ -59,3 +61,25 @@ def test_file_format_different_str():
             page_file_format="not supported",
         )
         PageSchema().load(asdict(_))
+
+
+@pytest.mark.parametrize(
+    "file_exists", [True, False], ids=["Page file exists", "Page file does not exist"]
+)
+def test_page_text(tmp_path, file_exists):
+    content = "h1. Test\nColorless green ideas"
+    updated_content = content + " sleep furiously"
+
+    if file_exists:
+        page_file: Path = tmp_path / "page.confluencewiki"
+        page_file.write_text(content)
+    else:
+        page_file = tmp_path / "none.md"
+
+    p = Page(page_title="title", page_file=str(page_file), page_space="LOC")
+
+    if file_exists:
+        assert p.page_text == content
+
+    p.page_text = updated_content
+    assert p.page_text == updated_content

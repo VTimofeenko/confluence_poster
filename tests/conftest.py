@@ -10,6 +10,7 @@ from utils import (
 from typer.testing import CliRunner
 from atlassian import errors
 from confluence_poster.main import app
+from confluence_poster.poster_config import Config
 from typing import Tuple, List
 
 
@@ -59,5 +60,10 @@ def setup_page(tmp_path, record_pages):
 
 
 @pytest.fixture(scope="function")
-def make_one_page_config(tmp_path):
+def make_one_page_config(tmp_path) -> (str, Config):
     return generate_local_config(tmp_path, pages=1)
+
+
+@pytest.fixture(scope="function")
+def make_two_page_config(tmp_path) -> (str, Config):
+    return generate_local_config(tmp_path, pages=2)
