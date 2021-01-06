@@ -27,7 +27,7 @@ setup(
         "requests",
         "xdg>=5.0.1",
         "tomlkit==0.7.0",
-        "click>=7.0.0",
+        "click>=7.1.1, <7.2.0",
         "marshmallow==3.10.0",
     ],
     python_requires=">=3.8, <4",

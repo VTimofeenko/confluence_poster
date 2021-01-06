@@ -3,7 +3,6 @@ from pathlib import Path
 from typer.testing import CliRunner
 from tomlkit import parse
 import pytest
-from typing import Iterable
 from itertools import product
 from utils import setup_input
 

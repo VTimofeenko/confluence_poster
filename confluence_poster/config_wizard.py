@@ -8,7 +8,6 @@ from tomlkit.parser import TOMLDocument
 from tomlkit.items import Table
 from dataclasses import dataclass
 from copy import deepcopy
-from enum import Enum
 
 from confluence_poster.poster_config import AllowedFileFormat
 
@@ -263,6 +262,7 @@ def _generate_next_page(filename: Union[Path, str]) -> int:
 def generate_page_dialog_params(
     page_no: int,
 ) -> Tuple[DialogParameter, DialogParameter, DialogParameter, DialogParameter]:
+    # noinspection PyUnresolvedReferences # TODO value for enum is unresolved?
     return (
         DialogParameter(
             title=f"pages.page{page_no}.page_title", comment="The title of the page"

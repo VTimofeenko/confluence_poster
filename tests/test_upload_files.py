@@ -67,7 +67,7 @@ def test_upload_files_single_page_config(setup_page, gen_attachments, file_count
     assert result.exit_code == 0
     assert "Uploading the files" in result.stdout
     assert f"\tUploading file {filename}" in result.stdout
-    assert f"\tSubmitted file {filename}" in result.stdout
+    assert f"\tUploaded file {filename}" in result.stdout
     assert "Done uploading files" in result.stdout
 
 
@@ -84,7 +84,7 @@ def test_upload_files_single_page_does_not_exist(tmp_path, gen_attachments):
 
 def test_upload_files_single_page_title_supplied(setup_page, gen_attachments):
     """Runs
-    post --config <config> --page-title <some page name> upload-files file1 file2...
+    confluence_poster --config <config> --page-title <some page name> post-page --upload-files file1 file2...
     And makes sure the files were attached to the proper page
     """
     page_id, config_file = setup_page
@@ -147,7 +147,7 @@ def test_upload_files_multiple_pages_no_agree(setup_two_pages):
         input="N\n",
         other_args=["some_attachment.txt"],
     )
-    assert result.exit_code == 1
+    assert result.exit_code == 3
     assert "Aborting" in result.stdout
 
 
@@ -183,5 +183,5 @@ def test_upload_files_multiple_pages_default(setup_two_pages):
     result: Result = upload_files(
         config_file=two_page_config_file, input="\n", other_args=["some_attachment.txt"]
     )
-    assert result.exit_code == 1
+    assert result.exit_code == 3
     assert "Aborting" in result.stdout

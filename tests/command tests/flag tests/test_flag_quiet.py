@@ -2,7 +2,6 @@ import pytest
 from typer.testing import CliRunner, Result
 from confluence_poster.main import app
 from utils import generate_run_cmd, run_with_config
-from atlassian.confluence import Confluence
 from functools import partial
 
 pytestmark = pytest.mark.online

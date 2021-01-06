@@ -86,13 +86,14 @@ def test_post_single_page_no_parent(make_one_page_config):
     )
     assert result.exit_code == 0
     assert "Looking for page" in result.stdout
-    assert "Should it be created?" in result.stdout  # checking the prompt
+    assert "Should the page be created?" in result.stdout  # checking the prompt
     assert (
         "Should the script look for a parent in space" in result.stdout
     )  # checking the prompt
     assert "Create the page in the root" in result.stdout  # checking the prompt
-    assert f"Page '{config.pages[0].page_title}' not found" in result.stdout
+    assert f"Could not find page '{config.pages[0].page_title}'" in result.stdout
     assert "Creating page" in result.stdout
+    assert "Created page" in result.stdout
     assert "Finished processing pages" in result.stdout
 
 
@@ -155,7 +156,7 @@ def test_post_single_page_with_parent(setup_page, parent_page_title_source, tmp_
         )
         assert "Which page should the script look for?" in result.stdout
         assert "URL is:" in result.stdout
-        assert "Proceed to create?" in result.stdout
+        assert "Proceed to create the page" in result.stdout
     else:
 
         if parent_page_title_source == "cmdline":
@@ -212,7 +213,7 @@ def test_skip_in_space_root():
         config_file=real_confluence_config,
     )
     assert "Looking for page" in result.stdout
-    assert "Should it be created?" in result.stdout  # checking the prompt
+    assert "Should the page be created?" in result.stdout  # checking the prompt
     assert (
         "Should the script look for a parent in space" in result.stdout
     )  # checking the prompt
@@ -315,5 +316,5 @@ def test_refuse_to_create_with_parent(setup_page):
     )
     assert "Which page should the script look for?" in result.stdout
     assert "URL is:" in result.stdout
-    assert "Proceed to create?" in result.stdout
+    assert "Should the page be created?" in result.stdout  # checking the prompt
     assert not page_created(page_title)

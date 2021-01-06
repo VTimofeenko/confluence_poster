@@ -1,12 +1,25 @@
 from atlassian import Confluence
 from dataclasses import dataclass, field
-from confluence_poster.poster_config import Page, AllowedFileFormat, Config
 from typing import Union, Callable, List
 from pathlib import Path
 from enum import Enum
-from typer import echo, prompt
+from typer import echo, prompt, confirm
+
+from confluence_poster.poster_config import Page, AllowedFileFormat, Config
 
 """File that contains procedures used inside main.py's functions"""
+
+
+def get_page_url(
+    page_title: str, space: str, confluence: Confluence
+) -> Union[str, None]:
+    """Retrieves page URL"""
+    if page := confluence.get_page_by_title(space=space, title=page_title, expand=""):
+        # according to Atlassian REST API reference, '_links' is a legitimate way to access links
+        page_link = confluence.url + page["_links"]["webui"]
+        return page_link
+    else:
+        return None
 
 
 def check_last_updated_by(
@@ -33,6 +46,7 @@ class PostedPage(Page):
     """Merges independently set fields with the runtime-set fields"""
 
     version_comment: Union[str, None] = None
+    page_id: Union[int, None] = None
 
 
 def guess_file_format(page_file: str) -> AllowedFileFormat:
@@ -96,7 +110,7 @@ class StateConfig:
     quiet: bool = False
 
     @property
-    def print_function(self):
+    def print_function(self) -> Callable:
         if self.quiet:
             # noinspection PyUnusedLocal
             def _quiet_func(*args, **kwargs):
@@ -107,8 +121,19 @@ class StateConfig:
             return echo
 
     @property
-    def prompt_function(self):
+    def always_print_function(self) -> Callable:
+        return echo
+
+    @property
+    def prompt_function(self) -> Callable:
         if self.filter_mode:
             raise Exception("Prompt invoked in filter mode!")
         else:
             return prompt
+
+    @property
+    def confirm_function(self) -> Callable:
+        if self.filter_mode:
+            raise Exception("Confirmation prompt invoked in filter mode!")
+        else:
+            return confirm

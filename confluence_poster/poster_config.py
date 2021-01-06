@@ -5,7 +5,7 @@ from typing import Union
 from operator import attrgetter
 from itertools import groupby
 from collections import UserDict
-from marshmallow import Schema, fields, validate, ValidationError
+from marshmallow import Schema, fields, ValidationError
 from enum import Enum
 
 

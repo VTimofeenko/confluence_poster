@@ -1,7 +1,7 @@
 import typer
 import sys
 from click import Choice
-from typing import Optional, List, Union, Tuple
+from typing import Optional, List, Tuple
 from pathlib import Path
 from logging import basicConfig, DEBUG
 from atlassian import Confluence
@@ -18,8 +18,11 @@ from confluence_poster.main_helpers import (
     guess_file_format,
     get_representation_for_format,
     StateConfig,
+    get_page_url,
 )
 from confluence_poster.convert_markdown_utils import post_to_convert_api
+from confluence_poster.page_creation_helpers import create_page
+from confluence_poster.file_upload_helpers import attach_files_to_page
 
 __version__ = "1.3.0"
 default_config_name = "config.toml"
@@ -29,18 +32,6 @@ def version_callback(value: bool):
     if value:
         typer.echo(f"Confluence poster version: {__version__}")
         raise typer.Exit()
-
-
-def get_page_url(
-    page_title: str, space: str, confluence: Confluence
-) -> Union[str, None]:
-    """Retrieves page URL"""
-    if page := confluence.get_page_by_title(space=space, title=page_title, expand=""):
-        # according to Atlassian REST API reference, '_links' is a legitimate way to access links
-        page_link = confluence.url + page["_links"]["webui"]
-        return page_link
-    else:
-        return None
 
 
 @dataclass
@@ -70,77 +61,6 @@ class Report:
                 output += f"{page.page_space}::{page.page_title} Reason: {reason}"
 
         return output
-
-
-def create_page(page: Page, confluence: Confluence) -> (bool, Union[int, None]):
-    """Handles user input for page creation. Returns True and page_id if the page is created."""
-
-    def find_parent(_parent_name: str, space: str) -> Union[int, None]:
-        """Helper function to locate the parent page. Returns page id. Returns None if page is not found"""
-        state.print_function(f"Looking for the parent page with title {_parent_name}")
-        if parent_page := confluence.get_page_by_title(
-            space=space, title=_parent_name, expand=""
-        ):
-            # according to Atlassian REST API reference, '_links' is a legitimate way to access links
-            parent_link = get_page_url(_parent_name, space, confluence)
-            _parent_id = parent_page["id"]
-            state.print_function(
-                f"Found page #{_parent_id}, called {_parent_name}. URL is:\n{parent_link}"
-            )
-            return _parent_id
-        else:
-            state.print_function(f"Parent page '{_parent_name}' not found")
-            return None
-
-    # Page does not exist. Confluence API reports it itself
-    state.print_function(f"Page '{page.page_title}' not found")
-    parent_id = None
-    if state.force_create or typer.confirm("Should it be created?", default=True):
-        if not page.parent_page_title:
-            while typer.confirm(
-                f"Should the script look for a parent in space {page.page_space}?"
-                f" (N to be prompted to create the page in the space root)"
-            ):
-                parent_name = typer.prompt("Which page should the script look for?")
-                if parent_id := find_parent(parent_name, page.page_space):
-                    if typer.confirm(f"Proceed to create?"):
-                        break
-                    else:
-                        return False, None
-            else:
-                # If _parent_id stays None, page will be created in the root
-                if not typer.confirm(
-                    f"Create the page in the root of {page.page_space}? N will skip the page"
-                ):
-                    return False, None
-        else:
-            state.print_function(
-                f"Creating under the specified parent page {page.parent_page_title}"
-            )
-            parent_id = find_parent(page.parent_page_title, page.page_space)
-            if parent_id is None:
-                typer.echo(
-                    f"Parent page '{page.parent_page_title}' not found in space '{page.page_space}'. "
-                    f"Skipping page."
-                )
-                return False, None
-
-        state.print_function("Creating page")
-
-        response = confluence.create_page(
-            space=page.page_space,
-            title=page.page_title,
-            body=page.page_text,
-            parent_id=parent_id,
-            representation=get_representation_for_format(page.page_file_format).value,
-        )
-        page_id = response["id"]
-        typer.echo(
-            f"Created page #{page_id} in space {page.page_space} called '{page.page_title}'"
-        )
-        return True, page_id
-    else:
-        return False, None
 
 
 app = typer.Typer()
@@ -188,6 +108,11 @@ def post_page(
         "--version-comment",
         show_default=False,
         help="Provider version comment.",
+    ),
+    create_in_space_root: Optional[bool] = typer.Option(
+        False,
+        "--create-in-space-root",
+        help="Automatically create the page in space root",
     ),
     file_format: Optional[AllowedFileFormat] = typer.Option(
         AllowedFileFormat.none,
@@ -240,13 +165,13 @@ def post_page(
                 "Upload files are specified, but there are more than 1 pages in the config."
             )
             if typer.confirm(
-                f"Continue by attaching all files to the first page, '{target_page.page_title}'?",
+                f"Continue by attaching all files to the first page, '{target_page.page_title}'? ('N') to abort",
                 default=False,
             ):
                 pass
             else:
                 typer.echo("Aborting.")
-                raise typer.Exit(1)
+                raise typer.Exit(3)
 
     for page in posted_pages:
         if page.page_file_format is AllowedFileFormat.none:
@@ -257,7 +182,7 @@ def post_page(
                 guessed_format = guess_file_format(page.page_file)
             except ValueError as e:
                 typer.echo(
-                    "Could not guess the file format. Consider specifying it manually. "
+                    "Could not guess theproceed to create file format. Consider specifying it manually. "
                     "See --help for information",
                     err=True,
                 )
@@ -270,6 +195,7 @@ def post_page(
         ):
             # Page exists
             state.print_function(f"Found page id #{page_id}")
+            page.page_id = page_id
 
             # If --force is supplied - we do not really care about who edited the page last
             if not (state.force or page.force_overwrite):
@@ -304,31 +230,25 @@ def post_page(
             )
             report.updated_pages += [page]
         else:
-            page_was_created, page_id = create_page(page=page, confluence=confluence)
-            if page_was_created:
+            state.print_function(
+                f"Could not find page '{page.page_title}' in space '{page.page_space}'"
+            )
+            if page_created := create_page(
+                page=page, state=state, create_in_root=create_in_space_root
+            ):
                 report.created_pages += [page]
                 if version_comment:
                     state.print_function(
                         "Page was created, but Confluence API does not support setting the version comment for"
                         " page creation. The comment was not provided."
                     )
+                page.page_id = page_created.page_id
             else:
                 typer.echo(f"Not creating page '{page.page_title}'")
-                report.unprocessed_pages += [
-                    (page, "User cancelled creation when prompted")
-                ]
+                report.unprocessed_pages += [(page, page_created.comment)]
 
-        if page_id and upload_files:
-            typer.echo("Uploading the files")
-            if page == target_page:
-                for path in files:
-                    if path.is_file():
-                        state.print_function(f"\tUploading file {path.name}")
-                        state.confluence_instance.attach_file(
-                            str(path), name=path.name, page_id=page_id
-                        )
-                        state.print_function(f"\tSubmitted file {path.name}")
-                typer.echo("Done uploading files")
+        if upload_files and target_page.page_id is not None:
+            attach_files_to_page(page=target_page, files=files, state=state)
 
     typer.echo("Finished processing pages")
 
@@ -591,7 +511,7 @@ def main(
         state.filter_mode = True
         if ctx.invoked_subcommand not in {"convert-markdown", "post-page"}:
             typer.echo(
-                f"Invoked command, {ctx.invoked_command} is not compatible with reading page text from stdin",
+                f"Invoked command, {ctx.invoked_subcommand} is not compatible with reading page text from stdin",
                 err=True,
             )
 

@@ -1,6 +1,4 @@
 import pytest
-from typer.testing import CliRunner, Result
-from functools import partial
 from utils import setup_input
 
 from confluence_poster.main_helpers import StateConfig

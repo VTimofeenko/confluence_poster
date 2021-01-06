@@ -7,7 +7,6 @@ from confluence_poster.poster_config import (
     Page,
     PageSchema,
     AllowedFileFormat,
-    AllowedFileFormatField,
 )
 
 pytestmark = pytest.mark.offline

@@ -1,21 +1,8 @@
 from typer.testing import CliRunner, Result
 import pytest
 from utils import (
-    clone_local_config,
     generate_run_cmd,
-    real_confluence_config,
-    real_config,
-    confluence_instance,
-    mk_fake_file,
-    page_created,
-    fake_title_generator,
-    get_page_body,
-    get_page_title,
-    get_pages_ids_from_stdout,
-    get_page_id_from_stdout,
     run_with_config,
-    generate_local_config,
-    join_input,
     create_single_page_input,
     mk_tmp_file,
 )
