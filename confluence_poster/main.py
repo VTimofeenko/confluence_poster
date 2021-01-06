@@ -278,16 +278,16 @@ def validate(
             space_id = state.confluence_instance.get_space(space_key).get("id")
         except ConnectionError:
             state.print_function(
-                f"Could not connect to {state.config.auth.url}. Make sure it is correct"
+                f"Could not connect to {state.config.auth.url}. Make sure it is correct",
+                err=True,
             )
             raise typer.Abort(1)
         except ApiError as e:
-            state.print_function(f"Got an API error, details: {e.reason}")
+            state.print_function(f"Got an API error, details: {e.reason}", err=True)
             raise typer.Abort(1)
         else:
             state.print_function(f"Got space id #{space_id}.")
     state.print_function("Validation successful")
-    return
 
 
 @app.command()
