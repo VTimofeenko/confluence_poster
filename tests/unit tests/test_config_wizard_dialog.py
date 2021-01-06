@@ -227,7 +227,7 @@ def test_incremental_config_dialog(prepare_config_file, monkeypatch, capsys):
 
 def test_page_add_dialog(prepare_config_file, monkeypatch):
     config, config_text = prepare_config_file
-    setup_input(monkeypatch, ["title", "testfile", "SPC", "Y"])
+    setup_input(monkeypatch, ["title", "testfile", "", "SPC", "Y"])
     assert page_add_dialog(config)
     assert (
         get_attribute_by_path("pages.page1.page_title", parse(config.read_text()))

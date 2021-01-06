@@ -1,4 +1,5 @@
 import typer
+from click import Choice
 from pathlib import Path
 from functools import reduce
 from typing import Union, Any, Tuple, FrozenSet, Iterable, Callable
@@ -7,6 +8,9 @@ from tomlkit.parser import TOMLDocument
 from tomlkit.items import Table
 from dataclasses import dataclass
 from copy import deepcopy
+from enum import Enum
+
+from confluence_poster.poster_config import AllowedFileFormat
 
 
 @dataclass
@@ -15,7 +19,7 @@ class DialogParameter:
 
     title: str
     comment: Union[str, None] = None  # for passing a comment
-    type: Union[type, None] = None  # for passing type to input
+    type: Union[type, None, Choice] = None  # for passing type to input
     required: bool = True
     hide_input: bool = False
 
@@ -256,6 +260,30 @@ def _generate_next_page(filename: Union[Path, str]) -> int:
             page_number = page_number + 1
 
 
+def generate_page_dialog_params(
+    page_no: int,
+) -> Tuple[DialogParameter, DialogParameter, DialogParameter, DialogParameter]:
+    return (
+        DialogParameter(
+            title=f"pages.page{page_no}.page_title", comment="The title of the page"
+        ),
+        DialogParameter(
+            title=f"pages.page{page_no}.page_file", comment="File containing page text"
+        ),
+        DialogParameter(
+            title=f"pages.page{page_no}.page_file_format",
+            comment="Text format of the page file. None or default - the script will try to guess it at runtime.",
+            type=Choice([_.value for _ in AllowedFileFormat]),
+            required=False,
+        ),
+        DialogParameter(
+            title=f"pages.page{page_no}.page_space",
+            comment="Key of the space with the page",
+            required=False,
+        ),
+    )
+
+
 def page_add_dialog(
     filename: Union[Path, str], config_print_function=lambda _: print(_)
 ) -> bool:
@@ -264,11 +292,7 @@ def page_add_dialog(
     page_number = _generate_next_page(filename)
     return config_dialog(
         filename,
-        [
-            f"pages.page{page_number}.page_title",
-            f"pages.page{page_number}.page_file",
-            DialogParameter(f"pages.page{page_number}.page_space", required=False),
-        ],
+        attributes=generate_page_dialog_params(page_number),
         config_print_function=config_print_function,
         incremental=True,
     )

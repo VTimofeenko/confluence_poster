@@ -5,7 +5,7 @@ from pathlib import Path
 from logging import basicConfig, DEBUG
 from confluence_poster.poster_config import Page, AllowedFileFormat
 from confluence_poster.config_loader import load_config
-from confluence_poster.config_wizard import DialogParameter
+from confluence_poster.config_wizard import DialogParameter, generate_page_dialog_params
 from atlassian import Confluence
 from atlassian.errors import ApiError
 from dataclasses import dataclass, field, astuple
@@ -426,14 +426,7 @@ def create_config(
             "if a page does not redefine it",
             required=False,
         ),
-        DialogParameter("pages.page1.page_title", comment="The title of the page"),
-        DialogParameter("pages.page1.page_file", comment="File containing page text"),
-        DialogParameter(
-            "pages.page1.page_space",
-            comment="Key of the space with the page",
-            required=False,
-        ),
-    )
+    ) + generate_page_dialog_params(1)
     home_only_params = (
         "author",
         "auth.confluence_url",

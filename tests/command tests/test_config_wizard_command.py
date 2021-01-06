@@ -97,11 +97,13 @@ def test_no_params_values_filled():
         "LOC",  # default space
         "Some page title",
         "page1.confluencewiki",
+        "confluencewiki",
         "LOC",
         "Y",  # save the edit
         "Y",  # add more pages
         "Other page title",
         "page2.confluencewiki",
+        "",
         "LOC",
         "Y",
     )
