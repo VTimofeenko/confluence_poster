@@ -1,22 +1,23 @@
 import typer
+import sys
 from click import Choice
 from typing import Optional, List, Union, Tuple
 from pathlib import Path
 from logging import basicConfig, DEBUG
-from confluence_poster.poster_config import Page, AllowedFileFormat
-from confluence_poster.config_loader import load_config
-from confluence_poster.config_wizard import DialogParameter, generate_page_dialog_params
 from atlassian import Confluence
 from atlassian.errors import ApiError
 from dataclasses import dataclass, field, astuple
 from requests.exceptions import ConnectionError
+
+from confluence_poster.poster_config import Page, AllowedFileFormat
+from confluence_poster.config_loader import load_config
+from confluence_poster.config_wizard import DialogParameter, generate_page_dialog_params
 from confluence_poster.main_helpers import (
     check_last_updated_by,
     PostedPage,
     guess_file_format,
     get_representation_for_format,
     StateConfig,
-    suppressed_echo,
 )
 from confluence_poster.convert_markdown_utils import post_to_convert_api
 
@@ -124,23 +125,20 @@ def create_page(page: Page, confluence: Confluence) -> (bool, Union[int, None]):
                 )
                 return False, None
 
-        with open(page.page_file, "r") as _:
-            state.print_function("Creating page")
+        state.print_function("Creating page")
 
-            response = confluence.create_page(
-                space=page.page_space,
-                title=page.page_title,
-                body=_.read(),
-                parent_id=parent_id,
-                representation=get_representation_for_format(
-                    page.page_file_format
-                ).value,
-            )
-            page_id = response["id"]
-            typer.echo(
-                f"Created page #{page_id} in space {page.page_space} called '{page.page_title}'"
-            )
-            return True, page_id
+        response = confluence.create_page(
+            space=page.page_space,
+            title=page.page_title,
+            body=page.page_text,
+            parent_id=parent_id,
+            representation=get_representation_for_format(page.page_file_format).value,
+        )
+        page_id = response["id"]
+        typer.echo(
+            f"Created page #{page_id} in space {page.page_space} called '{page.page_title}'"
+        )
+        return True, page_id
     else:
         return False, None
 
@@ -293,19 +291,18 @@ def post_page(
                     state.print_function("Flag 'force overwrite' set on the page.")
                 state.print_function("Author name check skipped.")
 
-            with open(page.page_file, "r") as _:
-                state.print_function(f"Updating page #{page_id}")
-                confluence.update_existing_page(
-                    page_id=page_id,
-                    title=page.page_title,
-                    body=_.read(),
-                    representation=get_representation_for_format(
-                        page.page_file_format
-                    ).value,
-                    minor_edit=state.minor_edit,
-                    version_comment=page.version_comment,
-                )
-                report.updated_pages += [page]
+            state.print_function(f"Updating page #{page_id}")
+            confluence.update_existing_page(
+                page_id=page_id,
+                title=page.page_title,
+                body=page.page_text,
+                representation=get_representation_for_format(
+                    page.page_file_format
+                ).value,
+                minor_edit=state.minor_edit,
+                version_comment=page.version_comment,
+            )
+            report.updated_pages += [page]
         else:
             page_was_created, page_id = create_page(page=page, confluence=confluence)
             if page_was_created:
@@ -537,6 +534,10 @@ def main(
         help="Provide a parent title to search for."
         " Applicable if there is only one page.",
     ),
+    page_file: Optional[Path] = typer.Option(
+        None,
+        help="Provide the path to the file containing page text. Allows passing '-' to read from stdin",
+    ),
     password: Optional[str] = typer.Option(
         None, help="Supply the password in command line.", envvar="CONFLUENCE_PASSWORD"
     ),
@@ -585,10 +586,16 @@ def main(
     if ctx.invoked_subcommand == "convert-markdown":
         quiet = True
 
-    if quiet:
-        state.print_function = suppressed_echo
-    else:
-        state.print_function = typer.echo
+    if page_file == "-":
+        quiet = True
+        state.filter_mode = True
+        if ctx.invoked_subcommand not in {"convert-markdown", "post-page"}:
+            typer.echo(
+                f"Invoked command, {ctx.invoked_command} is not compatible with reading page text from stdin",
+                err=True,
+            )
+
+    state.quiet = quiet
 
     state.print_function("Starting up confluence_poster")
 
@@ -620,17 +627,26 @@ def main(
         state.config = confluence_config
 
         # Check that the parameters are not used with more than 1 page in the config
-        if page_title or parent_page_title:
+        if page_title or parent_page_title or page_file:
             if len(confluence_config.pages) > 1:
                 typer.echo(
-                    "Page title specified as a parameter but there are more than 1 page in the config. "
-                    "Aborting."
+                    "Page title, parent page title or page file specified as a parameter "
+                    "but there are more than 1 page in the config.\n"
+                    "These parameters are intended to be used with only one page.\n"
+                    "Please specify them in the config.\n"
+                    "Aborting.",
+                    err=True,
                 )
                 raise typer.Exit(1)
             if page_title:
                 state.config.pages[0].page_title = page_title
             if parent_page_title:
                 state.config.pages[0].parent_page_title = parent_page_title
+            if page_file:
+                if page_file == "-":
+                    state.config.pages[0].page_text = sys.stdin.read()
+                else:
+                    state.config.pages[0].page_file = page_file
 
         # Validate password
         try:
@@ -639,7 +655,8 @@ def main(
             )
         except StopIteration:
             typer.echo(
-                "Password is not specified in environment, parameter or the config. Aborting"
+                "Password is not specified in environment, parameter or the config. Aborting",
+                err=True,
             )
             raise typer.Exit(1)
 

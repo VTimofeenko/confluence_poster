@@ -4,7 +4,7 @@ from confluence_poster.poster_config import Page, AllowedFileFormat, Config
 from typing import Union, Callable, List
 from pathlib import Path
 from enum import Enum
-from typer import echo
+from typer import echo, prompt
 
 """File that contains procedures used inside main.py's functions"""
 
@@ -92,10 +92,23 @@ class StateConfig:
     print_report: bool = False
     force_create: bool = False
     created_pages: List[int] = field(default_factory=list)
-    print_function: Callable = echo
+    filter_mode: bool = False
+    quiet: bool = False
 
+    @property
+    def print_function(self):
+        if self.quiet:
+            # noinspection PyUnusedLocal
+            def _quiet_func(*args, **kwargs):
+                pass
 
-# noinspection PyUnusedLocal
-def suppressed_echo(*args, **kwargs):
-    """To be used if quiet is passed"""
-    pass
+            return _quiet_func
+        else:
+            return echo
+
+    @property
+    def prompt_function(self):
+        if self.filter_mode:
+            raise Exception("Prompt invoked in filter mode!")
+        else:
+            return prompt

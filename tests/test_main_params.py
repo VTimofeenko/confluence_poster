@@ -65,7 +65,7 @@ def test_page_title_specified_two_pages(tmp_path, param):
         ],
     )
     assert _.exit_code == 1
-    assert "Page title specified as a parameter" in _.stdout
+    assert "Please specify them in the config." in _.stdout
 
 
 @pytest.mark.parametrize("password_source", [None, "cmdline", "environment", "config"])

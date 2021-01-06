@@ -3,11 +3,13 @@ from typer.testing import CliRunner, Result
 from functools import partial
 from typing import Callable, Union, List, Iterable, Tuple
 from faker import Faker
-from confluence_poster.poster_config import Config, Page
 from atlassian import Confluence
 from pathlib import Path
 import re
 from inspect import currentframe
+import io
+
+from confluence_poster.poster_config import Config, Page
 
 
 real_confluence_config = (
@@ -296,6 +298,11 @@ def replace_new_author(config_file, tmp_path):
         key_to_update="author",
         value_to_update=Faker().user_name(),
     )
+
+
+def setup_input(monkeypatch, cli_input: Iterable[str]):
+    """Macro to monkeypatch the input"""
+    monkeypatch.setattr("sys.stdin", io.StringIO("\n".join(cli_input) + "\n"))
 
 
 create_single_page_input = join_input(
