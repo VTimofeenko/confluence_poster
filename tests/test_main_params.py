@@ -1,7 +1,7 @@
 from typer.testing import CliRunner
 from confluence_poster.main import app, state, main
 from confluence_poster.main_helpers import StateConfig
-from utils import mk_tmp_file
+from utils import mk_tmp_file, generate_fake_page
 import pytest
 from dataclasses import asdict
 
@@ -12,6 +12,7 @@ pytestmark = pytest.mark.offline
 
 @pytest.fixture(scope="module")
 def teardown_state():
+    """Fixture to clear the state after this module is done. Necessary to prevent state being polluted by pytest."""
     yield
     # noinspection PyGlobalUndefined
     global state
@@ -136,6 +137,17 @@ def test_cloud_api(tmp_path):
     )
     assert result.exit_code == 0
     assert state.confluence_instance.api_version == "cloud"
+
+
+def test_page_file_not_specified_filter_mode(tmp_path, make_one_page_config):
+    """Runs the command with page_file set to a real file. Checks that filter_mode is off."""
+    config_file, config = make_one_page_config
+    _, content, page_file = generate_fake_page(tmp_path)
+    result = runner.invoke(
+        app, ["--page-file", page_file, "--config", config_file, "validate"]
+    )
+    assert result.exit_code == 0
+    assert state.filter_mode is False
 
 
 def test_show_version():
