@@ -4,6 +4,7 @@ from typing import Union, Callable, List
 from pathlib import Path
 from enum import Enum
 from typer import echo, prompt, confirm
+from functools import partial
 
 from confluence_poster.poster_config import Page, AllowedFileFormat, Config
 
@@ -106,7 +107,7 @@ class StateConfig:
     print_report: bool = False
     force_create: bool = False
     created_pages: List[int] = field(default_factory=list)
-    filter_mode: bool = False
+    _filter_mode: bool = False
     quiet: bool = False
 
     @property
@@ -127,13 +128,36 @@ class StateConfig:
     @property
     def prompt_function(self) -> Callable:
         if self.filter_mode:
-            raise Exception("Prompt invoked in filter mode!")
+            # noinspection PyUnusedLocal
+            def _raise_exception(*args, **kwargs):
+                raise Exception("Prompt invoked in filter mode!")
+
+            return _raise_exception
         else:
             return prompt
 
     @property
     def confirm_function(self) -> Callable:
         if self.filter_mode:
-            raise Exception("Confirmation prompt invoked in filter mode!")
+            # noinspection PyUnusedLocal
+            def _raise_exception(*args, **kwargs):
+                # TODO: show prompt?
+                raise Exception("Confirmation prompt invoked in filter mode!")
+
+            return _raise_exception
         else:
             return confirm
+
+    @property
+    def print_stderr(self) -> Callable:
+        return partial(echo, err=True)
+
+    @property
+    def filter_mode(self):
+        return self._filter_mode
+
+    @filter_mode.setter
+    def filter_mode(self, value: bool):
+        self._filter_mode = value
+        if value:
+            self.quiet = True

@@ -77,24 +77,23 @@ def convert_markdown(
     )
 ):
     """Converts single page text from markdown to html representation (aka "editor"). Prints the converted text.
-    Implies running the utility with --quiet."""
+    Implies running the utility with --quiet. Outputs only to stderr."""
     confluence = state.confluence_instance
+    always_echo = state.always_print_function
+    echo_err = state.print_stderr
+
     if len(state.config.pages) > 1:
-        typer.echo(
-            "This command supports converting only one page at a time.", err=True
-        )
+        echo_err("This command supports converting only one page at a time.")
         raise typer.Exit(1)
 
     if use_confluence_converter:
-        typer.echo(
+        echo_err(
             "Using the converter built into Confluence which is labeled as private API. "
             "Consider using external tool",
-            err=True,
         )
-        typer.echo(post_to_convert_api(confluence, state.config.pages[0].page_text))
-    typer.echo(
+        always_echo(post_to_convert_api(confluence, state.config.pages[0].page_text))
+    echo_err(
         "Submit the converted text using `confluence_poster post-page --file-format html`",
-        err=True,
     )
 
 
@@ -125,13 +124,19 @@ def post_page(
     files: Optional[List[Path]] = typer.Argument(None, help="List of files to upload"),
 ):
     """Posts the content of the pages."""
+    echo = state.print_function
+    always_echo = state.always_print_function
+    echo_err = state.print_stderr
+    confirm = state.confirm_function
+    prompt = state.prompt_function
+
     report = Report(confluence_instance=state.confluence_instance)
     confluence = state.confluence_instance
     posted_pages = [PostedPage(*astuple(_)) for _ in state.config.pages]
     target_page = posted_pages[0]
 
     if len(posted_pages) > 1 and version_comment is not None:
-        apply_version_comment_to = typer.prompt(
+        apply_version_comment_to = prompt(
             text=f"Multiple pages specified. Do you want to apply the comment to [A]ll pages, "
             "[F]irst one or [N]ot apply it?",
             type=Choice(choices=["A", "F", "N"], case_sensitive=False),
@@ -151,7 +156,7 @@ def post_page(
 
     # file format check
     if len(posted_pages) > 1 and file_format is not AllowedFileFormat.none:
-        typer.echo(
+        echo_err(
             "File format cannot be used for cases when there are more than 1 pages in the config. "
             "Consider adding it to the config file."
         )
@@ -161,40 +166,39 @@ def post_page(
 
     if upload_files:
         if len(posted_pages) > 1:
-            typer.echo(
+            always_echo(
                 "Upload files are specified, but there are more than 1 pages in the config."
             )
-            if typer.confirm(
+            if confirm(
                 f"Continue by attaching all files to the first page, '{target_page.page_title}'? ('N') to abort",
                 default=False,
             ):
                 pass
             else:
-                typer.echo("Aborting.")
+                echo_err("Aborting.")
                 raise typer.Exit(3)
 
     for page in posted_pages:
         if page.page_file_format is AllowedFileFormat.none:
-            state.print_function(
+            echo(
                 f"File format for page {page.page_title} not specified. Trying to determine it..."
             )
             try:
                 guessed_format = guess_file_format(page.page_file)
             except ValueError as e:
-                typer.echo(
+                echo_err(
                     "Could not guess the file format. Consider specifying it manually. "
                     "See --help for information",
-                    err=True,
                 )
                 raise e
             page.page_file_format = guessed_format
 
-        state.print_function(f"Looking for page '{page.page_title}'")
+        echo(f"Looking for page '{page.page_title}'")
         if page_id := confluence.get_page_id(
             space=page.page_space, title=page.page_title
         ):
             # Page exists
-            state.print_function(f"Found page id #{page_id}")
+            echo(f"Found page id #{page_id}")
             page.page_id = page_id
 
             # If --force is supplied - we do not really care about who edited the page last
@@ -205,19 +209,19 @@ def post_page(
                     confluence_instance=confluence,
                 )
                 if not updated_by_author:
-                    state.print_function(
+                    echo(
                         f"Flag 'force' is not set and last author of page '{page.page_title}'"
                         f" is {page_last_updated_by}, not {state.config.author}. Skipping page"
                     )
                     continue
             else:
                 if state.force:
-                    state.print_function("Flag 'force' set globally.")
+                    echo("Flag 'force' set globally.")
                 elif page.force_overwrite:
-                    state.print_function("Flag 'force overwrite' set on the page.")
-                state.print_function("Author name check skipped.")
+                    echo("Flag 'force overwrite' set on the page.")
+                echo("Author name check skipped.")
 
-            state.print_function(f"Updating page #{page_id}")
+            echo(f"Updating page #{page_id}")
             confluence.update_existing_page(
                 page_id=page_id,
                 title=page.page_title,
@@ -230,7 +234,7 @@ def post_page(
             )
             report.updated_pages += [page]
         else:
-            state.print_function(
+            echo(
                 f"Could not find page '{page.page_title}' in space '{page.page_space}'"
             )
             if page_created := create_page(
@@ -238,22 +242,22 @@ def post_page(
             ):
                 report.created_pages += [page]
                 if version_comment:
-                    state.print_function(
+                    echo(
                         "Page was created, but Confluence API does not support setting the version comment for"
-                        " page creation. The comment was not provided."
+                        " page creation. The comment was not saved in the page history."
                     )
                 page.page_id = page_created.page_id
             else:
-                typer.echo(f"Not creating page '{page.page_title}'")
+                always_echo(f"Not creating page '{page.page_title}'")
                 report.unprocessed_pages += [(page, page_created.comment)]
 
         if upload_files and target_page.page_id is not None:
             attach_files_to_page(page=target_page, files=files, state=state)
 
-    typer.echo("Finished processing pages")
+    always_echo("Finished processing pages")
 
     if state.print_report:
-        typer.echo(report)
+        always_echo(report)
 
 
 @app.command()
@@ -268,26 +272,26 @@ def validate(
 ):
     """Validates the provided settings. If 'online' is true - tries to fetch the space from the config using the
     supplied credentials."""
+    echo = state.print_function
+    echo_err = state.print_stderr
+
     if online:
-        state.print_function(
-            "Validating settings against the Confluence instance from config"
-        )
+        echo("Validating settings against the Confluence instance from config")
         try:
             space_key = state.config.pages[0].page_space
             state.print_function(f"Trying to get {space_key}...")
             space_id = state.confluence_instance.get_space(space_key).get("id")
         except ConnectionError:
-            state.print_function(
+            echo_err(
                 f"Could not connect to {state.config.auth.url}. Make sure it is correct",
-                err=True,
             )
             raise typer.Abort(1)
         except ApiError as e:
-            state.print_function(f"Got an API error, details: {e.reason}", err=True)
+            echo_err(f"Got an API error, details: {e.reason}")
             raise typer.Abort(1)
         else:
-            state.print_function(f"Got space id #{space_id}.")
-    state.print_function("Validation successful")
+            echo(f"Got space id #{space_id}.")
+    echo("Validation successful")
 
 
 @app.command()
@@ -308,6 +312,12 @@ def create_config(
         page_add_dialog,
     )
     from functools import partial
+
+    echo = state.print_function
+    always_echo = state.always_print_function
+    echo_err = state.print_stderr
+    confirm = state.confirm_function
+    prompt = state.prompt_function
 
     home_config_location = xdg.xdg_config_home() / "confluence_poster/config.toml"
 
@@ -370,7 +380,7 @@ def create_config(
             f"config files in {home_config_location.parent}(XDG_CONFIG_HOME) and {Path.cwd()}(local directory)"
         )
 
-        answer = typer.prompt(
+        answer = prompt(
             f"Create config in {home_config_location.parent}? [Y/n/q]"
             "\n* 'n' skips to config in the local directory"
             "\n* 'q' will exit the wizard\n",
@@ -401,16 +411,16 @@ def create_config(
 
     if not local_only:
         # If local-only is passed - no need to ask for confirmation of creating a local only config
-        local_answer = typer.confirm(
+        local_answer = confirm(
             f"Proceed to create config in {Path.cwd()}?", default=True
         )
         if not local_answer:
-            typer.echo("Exiting.")
+            echo("Exiting.")
             raise typer.Exit()
 
     # Create config in current working directory
     state.print_function("Creating config in local directory.")
-    local_config_name = typer.prompt(
+    local_config_name = prompt(
         "Please provide the name of local config", type=str, default=default_config_name
     )
 
@@ -425,10 +435,10 @@ def create_config(
             # None means the user does not want to overwrite the file
             break
 
-    while typer.confirm("Add more pages?", default=False):
+    while confirm("Add more pages?", default=False):
         page_add_dialog(Path.cwd() / local_config_name)
 
-    typer.echo(
+    echo(
         "Configuration wizard finished. Consider running the `validate` command to check the generated config"
     )
 
@@ -503,28 +513,36 @@ def main(
     """Supplementary script for writing confluence wiki articles in
     vim. Uses information from the config to post the article content to confluence.
     """
+
     if ctx.invoked_subcommand == "convert-markdown":
         quiet = True
 
-    if page_file == "-":
-        quiet = True
+    if str(page_file) == "-":
         state.filter_mode = True
         if ctx.invoked_subcommand not in {"convert-markdown", "post-page"}:
             typer.echo(
                 f"Invoked command, {ctx.invoked_subcommand} is not compatible with reading page text from stdin",
                 err=True,
             )
+            raise typer.Exit(3)
+    else:
+        state.filter_mode = False
 
     state.quiet = quiet
 
-    state.print_function("Starting up confluence_poster")
+    echo = state.print_function
+    always_echo = state.always_print_function
+    echo_err = state.print_stderr
 
+    echo("Starting confluence_poster")
     if debug:
         from pprint import pprint
 
-        typer.echo("Set options:")
+        always_echo("Running in debug mode.")
+
+        echo("Set options:")
         state.debug = True
-        typer.echo(pprint(locals()))
+        echo(pprint(locals()))
         # Set global debug to true, for other modules
         basicConfig(level=DEBUG, format="%(asctime)s %(levelname)s %(message)s")
     else:
@@ -538,24 +556,23 @@ def main(
         state.print_report = report
         state.minor_edit = minor_edit
 
-        state.print_function("Reading config")
+        echo("Reading config")
         try:
             confluence_config = load_config(config)
         except FileNotFoundError as e:
-            typer.echo("Config file not found. Consider running `create-config`")
+            echo_err("Config file not found. Consider running `create-config`")
             raise e
         state.config = confluence_config
 
         # Check that the parameters are not used with more than 1 page in the config
         if page_title or parent_page_title or page_file:
             if len(confluence_config.pages) > 1:
-                typer.echo(
+                echo_err(
                     "Page title, parent page title or page file specified as a parameter "
                     "but there are more than 1 page in the config.\n"
                     "These parameters are intended to be used with only one page.\n"
                     "Please specify them in the config.\n"
                     "Aborting.",
-                    err=True,
                 )
                 raise typer.Exit(1)
             if page_title:
@@ -563,7 +580,7 @@ def main(
             if parent_page_title:
                 state.config.pages[0].parent_page_title = parent_page_title
             if page_file:
-                if page_file == "-":
+                if state.filter_mode:
                     state.config.pages[0].page_text = sys.stdin.read()
                 else:
                     state.config.pages[0].page_file = page_file
@@ -574,9 +591,8 @@ def main(
                 _ for _ in [password, confluence_config.auth.password] if _ is not None
             )
         except StopIteration:
-            typer.echo(
+            echo_err(
                 "Password is not specified in environment, parameter or the config. Aborting",
-                err=True,
             )
             raise typer.Exit(1)
 

@@ -1,7 +1,13 @@
 import pytest
 from typer.testing import CliRunner, Result
-from confluence_poster.main import app, state
-from utils import generate_run_cmd, run_with_config, generate_local_config, mk_fake_file
+from confluence_poster.main import app
+from utils import (
+    generate_run_cmd,
+    run_with_config,
+    generate_local_config,
+    mk_fake_file,
+    confluence_instance,
+)
 from atlassian.confluence import Confluence
 from functools import partial
 
@@ -47,7 +53,7 @@ def test_single_page_with_comment(mode, tmp_path):
             _get_version_comment(
                 page_title=config.pages[0].page_title,
                 space="LOC",
-                confluence=state.confluence_instance,
+                confluence=confluence_instance,
             )
             == version_comment
         )
@@ -101,7 +107,7 @@ def test_multiple_pages_with_comment(apply_config_answer, tmp_path):
                 _get_version_comment(
                     page_title=page.page_title,
                     space=page.page_space,
-                    confluence=state.confluence_instance,
+                    confluence=confluence_instance,
                 )
                 == "update_comment"
             )
@@ -115,7 +121,7 @@ def test_multiple_pages_with_comment(apply_config_answer, tmp_path):
                 _get_version_comment(
                     page_title=page.page_title,
                     space=page.page_space,
-                    confluence=state.confluence_instance,
+                    confluence=confluence_instance,
                 )
                 == _checked_comment
             )
@@ -125,7 +131,7 @@ def test_multiple_pages_with_comment(apply_config_answer, tmp_path):
                 _get_version_comment(
                     page_title=page.page_title,
                     space=page.page_space,
-                    confluence=state.confluence_instance,
+                    confluence=confluence_instance,
                 )
                 == ""
             )

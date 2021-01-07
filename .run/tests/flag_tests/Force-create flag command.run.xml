@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Force-create flag command" type="tests" factoryName="py.test" folderName="Flag tests">
+  <configuration default="false" name="&quot;--force-create&quot; flag" type="tests" factoryName="py.test" folderName="Flag tests">
     <module name="confluence_poster" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="false" />

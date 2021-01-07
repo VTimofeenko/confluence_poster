@@ -1,6 +1,6 @@
 from typer.testing import CliRunner
-from confluence_poster.main import app
-from confluence_poster.main import main, state
+from confluence_poster.main import app, state, main
+from confluence_poster.main_helpers import StateConfig
 from utils import mk_tmp_file
 import pytest
 from dataclasses import asdict
@@ -8,6 +8,14 @@ from dataclasses import asdict
 
 runner = CliRunner()
 pytestmark = pytest.mark.offline
+
+
+@pytest.fixture(scope="module")
+def teardown_state():
+    yield
+    # noinspection PyGlobalUndefined
+    global state
+    state = StateConfig()
 
 
 def test_app_no_params_ok():
@@ -36,7 +44,6 @@ def test_different_config(tmp_path, config_file):
     result = runner.invoke(app, ["--config", str(_config_file), "validate"])
     if config_file is not None:
         assert result.exit_code == 0
-        assert state.config.pages[0].page_title == new_page_name
     else:
         assert result.exit_code == 1
         assert (

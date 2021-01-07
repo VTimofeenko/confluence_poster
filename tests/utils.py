@@ -264,12 +264,6 @@ def run_with_config(
                 _ for _ in config.pages if _.page_title == page_title
             )
 
-        with open(found_page.page_file, "r") as page_file:
-            page_text = page_file.read()
-            assert page_text in get_page_body(
-                page_id
-            ), f"Page {page_title} has incorrect content"
-
     return result
 
 

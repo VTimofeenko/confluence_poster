@@ -3,7 +3,6 @@ from utils import setup_input
 
 from confluence_poster.main_helpers import StateConfig
 
-
 pytestmark = pytest.mark.offline
 
 
@@ -11,12 +10,12 @@ pytestmark = pytest.mark.offline
     "quiet",
     (None, True, False),
     ids=(
-        ".quiet is default -> print prints",
-        ".quiet is true -> print does not print",
-        ".quiet is false -> print prints",
+        ".quiet is default -> print prints, print_stderr prints",
+        ".quiet is true -> print does not print, print_stderr prints",
+        ".quiet is false -> print prints, print_stderr prints",
     ),
 )
-def test_print_function(capsys, quiet):
+def test_print_function_print_stderr(capsys, quiet):
     """Checks that the print function is suppressed <=> quiet is set to True"""
     s = StateConfig()
     if quiet is not None:
@@ -24,8 +23,10 @@ def test_print_function(capsys, quiet):
     else:
         assert not s.quiet
     s.print_function("Output")
+    s.print_stderr("Stderr")
     captured = capsys.readouterr()
     assert (captured.out == "Output\n") == (not s.quiet)
+    assert captured.err == "Stderr\n"
 
 
 @pytest.mark.parametrize(
@@ -37,7 +38,7 @@ def test_print_function(capsys, quiet):
         "filter_mode is false -> prompt and confirm work",
     ),
 )
-def test_prompt_function(monkeypatch, filter_mode):
+def test_prompt_function_confirm_function(monkeypatch, filter_mode):
     s = StateConfig()
     if filter_mode is not None:
         s.filter_mode = filter_mode
@@ -55,3 +56,10 @@ def test_prompt_function(monkeypatch, filter_mode):
         assert _ == "Y"
         _ = s.confirm_function("Prompt?")
         assert _
+
+
+def test_filter_mode():
+    """Checks that filter also toggles quiet mode"""
+    s = StateConfig()
+    s.filter_mode = True
+    assert s.quiet
