@@ -1,6 +1,6 @@
 from typer.testing import CliRunner
 import pytest
-from confluence_poster.main import app, get_page_url
+from confluence_poster.main import app
 from utils import (
     clone_local_config,
     generate_run_cmd,
@@ -15,7 +15,6 @@ from utils import (
     get_pages_ids_from_stdout,
     get_page_id_from_stdout,
     run_with_config,
-    generate_local_config,
     join_input,
     create_single_page_input,
 )
@@ -51,11 +50,6 @@ def run_with_title(
         run_with_config(pre_args=["--page-title", page_title], *args, **kwargs),
         page_title,
     )
-
-
-@pytest.fixture(scope="function")
-def make_one_page_config(tmp_path):
-    return generate_local_config(tmp_path, pages=1)
 
 
 def test_page_overridden_title(make_one_page_config):
@@ -97,16 +91,10 @@ def test_post_single_page_no_parent(make_one_page_config):
     assert "Finished processing pages" in result.stdout
 
 
-@pytest.mark.parametrize(
-    "report",
-    (False, True),
-    ids=lambda report: f"User refuses to create pages. Run with{'out'*report} report",
-)
-def test_not_create_if_refused(make_one_page_config, report):
+def test_not_create_if_refused(make_one_page_config):
     config_file, config = make_one_page_config
     result = run_with_config(
-        input="N\n",
-        pre_args=["--report"] * report,
+        input=join_input("N"),
         config_file=config_file,
     )
     assert result.exit_code == 0
@@ -119,20 +107,6 @@ def test_not_create_if_refused(make_one_page_config, report):
     assert (
         len(get_pages_ids_from_stdout(result.stdout)) == 0
     ), "Detected a page that was created!"
-
-    if report:
-        page = config.pages[0]
-        assert (
-            get_page_url(page.page_title, page.page_space, confluence_instance) is None
-        )
-        assert (
-            "Created pages:\nNone\nUpdated pages:\nNone\nUnprocessed pages:"
-            in result.stdout
-        )
-        assert (
-            f"{page.page_space}::{page.page_title} Reason: User cancelled creation when prompted"
-            in result.stdout
-        )
 
 
 @pytest.mark.parametrize(

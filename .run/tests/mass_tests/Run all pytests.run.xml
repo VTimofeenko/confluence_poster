@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Run all pytests" type="tests" factoryName="py.test" folderName="Mass tests">
+  <configuration default="false" name="Run all pytests" type="tests" factoryName="py.test">
     <module name="confluence_poster" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />

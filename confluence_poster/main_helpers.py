@@ -1,12 +1,10 @@
 from atlassian import Confluence
 from dataclasses import dataclass, field
 from typing import Union, Callable, List
-from pathlib import Path
-from enum import Enum
 from typer import echo, prompt, confirm
 from functools import partial
 
-from confluence_poster.poster_config import Page, AllowedFileFormat, Config
+from confluence_poster.poster_config import Page, Config
 
 """File that contains procedures used inside main.py's functions"""
 
@@ -48,51 +46,6 @@ class PostedPage(Page):
 
     version_comment: Union[str, None] = None
     page_id: Union[int, None] = None
-
-
-def guess_file_format(page_file: str) -> AllowedFileFormat:
-    """Attempts to guess the file format from the page file by the file extension.
-    If the extension is unknown raises an error"""
-    md_file_formats = {
-        ".markdown",
-        ".mdown",
-        ".mkdn",
-        ".md",
-        ".mkd",
-        ".mdwn",
-        ".mdtxt",
-        ".mdtext",
-        ".text",
-        ".Rmd",
-    }
-    cw_file_formats = {".confluencewiki", ".wiki"}
-    html_file_formats = {".html"}
-    if (suffix := Path(page_file).suffix) in md_file_formats:
-        return AllowedFileFormat.markdown
-    elif suffix in cw_file_formats:
-        return AllowedFileFormat.confluencewiki
-    elif suffix in html_file_formats:
-        return AllowedFileFormat.html
-    else:
-        raise ValueError(f"File format of file {page_file} could not be guessed.")
-
-
-class Representation(Enum):
-    wiki = "wiki"
-    editor = "editor"
-
-
-def get_representation_for_format(file_format: AllowedFileFormat) -> Representation:
-    if file_format == AllowedFileFormat.markdown:
-        raise ValueError("Posting direct markdown is not supported")
-    elif file_format == AllowedFileFormat.html:
-        return Representation.editor
-    elif file_format == AllowedFileFormat.confluencewiki:
-        return Representation.wiki
-    else:
-        raise ValueError(
-            f"Could not determine representation value for {file_format}. This is probably a bug."
-        )
 
 
 @dataclass

@@ -1,9 +1,10 @@
 from typer.testing import CliRunner
-from confluence_poster.main import app, state, main
+
+# noinspection PyUnresolvedReferences
+from confluence_poster.main import app, main, state
 from confluence_poster.main_helpers import StateConfig
 from utils import mk_tmp_file, generate_fake_page
 import pytest
-from dataclasses import asdict
 
 
 runner = CliRunner()
@@ -80,15 +81,24 @@ def test_page_title_specified_two_pages(tmp_path, param):
 def test_no_passwords_anywhere(tmp_path, password_source, monkeypatch):
     """Checks that the password is applied, depending on the source.
     If source is 'None' - no password is supplied anywhere and validation fails."""
+    config_file = mk_tmp_file(tmp_path, key_to_pop="auth.password")
     if password_source is None:
-        config_file = mk_tmp_file(tmp_path, key_to_pop="auth.password")
         result = runner.invoke(app, ["--config", str(config_file), "validate"])
     else:
         if password_source == "cmdline":
-            result = runner.invoke(app, ["--password", password_source, "validate"])
+            result = runner.invoke(
+                app,
+                [
+                    "--config",
+                    str(config_file),
+                    "--password",
+                    password_source,
+                    "validate",
+                ],
+            )
         elif password_source == "environment":
             monkeypatch.setenv("CONFLUENCE_PASSWORD", password_source)
-            result = runner.invoke(app, ["validate"])
+            result = runner.invoke(app, ["--config", str(config_file), "validate"])
         else:
             config_file = mk_tmp_file(
                 tmp_path, key_to_update="auth.password", value_to_update=password_source
@@ -116,27 +126,22 @@ def test_one_page_no_title_in_config(tmp_path):
     assert state.config.pages[0].page_title == page_title
 
 
-@pytest.mark.parametrize("param", ["debug", "force", "minor_edit", "force_create"])
-def test_binary_parameter_in_state(param):
-    """Checks that the binary parameters are reflected in state."""
-    result = runner.invoke(app, [f'--{param.replace("_", "-")}', "validate"])
-    assert result.exit_code == 0
-    assert asdict(state).get(param)
-
-
-def test_cloud_api(tmp_path):
+@pytest.mark.parametrize(
+    "is_cloud",
+    (True, False),
+    ids=lambda is_cloud: f"Create config with is_cloud set to {is_cloud}, runs `confluence_poster validate`",
+)
+def test_cloud_api(tmp_path, is_cloud):
     """Checks that the logic to handle what version of Atlassian API is to be used works well"""
-    result = runner.invoke(app, ["--force", "validate"])
-    assert result.exit_code == 0
-    assert state.confluence_instance.api_version == "latest"
-    not_cloud_config = mk_tmp_file(
-        tmp_path, key_to_update="auth.is_cloud", value_to_update=True
+    config = mk_tmp_file(
+        tmp_path, key_to_update="auth.is_cloud", value_to_update=is_cloud
     )
-    result = runner.invoke(
-        app, ["--config", str(not_cloud_config), "--force", "validate"]
-    )
+    result = runner.invoke(app, ["--config", str(config), "validate"])
     assert result.exit_code == 0
-    assert state.confluence_instance.api_version == "cloud"
+    if is_cloud:
+        assert state.confluence_instance.api_version == "cloud"
+    else:
+        assert state.confluence_instance.api_version == "latest"
 
 
 def test_page_file_not_specified_filter_mode(tmp_path, make_one_page_config):

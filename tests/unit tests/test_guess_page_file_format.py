@@ -1,5 +1,5 @@
 import pytest
-from confluence_poster.main_helpers import guess_file_format
+from confluence_poster.convert_utils import guess_file_format
 from confluence_poster.poster_config import AllowedFileFormat
 
 pytestmark = pytest.mark.offline

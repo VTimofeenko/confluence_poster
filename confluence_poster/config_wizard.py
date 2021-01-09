@@ -262,7 +262,7 @@ def _generate_next_page(filename: Union[Path, str]) -> int:
 def generate_page_dialog_params(
     page_no: int,
 ) -> Tuple[DialogParameter, DialogParameter, DialogParameter, DialogParameter]:
-    # noinspection PyUnresolvedReferences # TODO value for enum is unresolved?
+    # noinspection PyUnresolvedReferences
     return (
         DialogParameter(
             title=f"pages.page{page_no}.page_title", comment="The title of the page"
@@ -273,7 +273,9 @@ def generate_page_dialog_params(
         DialogParameter(
             title=f"pages.page{page_no}.page_file_format",
             comment="Text format of the page file. None or default - the script will try to guess it at runtime.",
-            type=Choice([_.value for _ in AllowedFileFormat]),
+            type=Choice(
+                [_[0] for _ in AllowedFileFormat.__members__.items()]
+            ),  # making the linter happy, see JetBrains PY-36205
             required=False,
         ),
         DialogParameter(

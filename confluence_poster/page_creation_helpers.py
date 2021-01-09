@@ -1,6 +1,7 @@
 from typing import Union
 
-from confluence_poster.main_helpers import StateConfig, get_representation_for_format
+from confluence_poster.main_helpers import StateConfig
+from confluence_poster.convert_utils import get_representation_for_format
 from confluence_poster.page_location_helpers import determine_location
 from confluence_poster.poster_config import Page
 

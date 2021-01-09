@@ -9,7 +9,6 @@ from utils import (
     get_pages_ids_from_stdout,
     confluence_instance,
 )
-from atlassian.confluence import Confluence
 from functools import partial
 
 

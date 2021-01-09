@@ -1,11 +1,14 @@
 import pytest
-from confluence_poster.main_helpers import get_representation_for_format, Representation
+from confluence_poster.convert_utils import (
+    Representation,
+    get_representation_for_format,
+)
 from confluence_poster.poster_config import AllowedFileFormat
 
 pytestmark = pytest.mark.offline
 
 arg_values = (
-    (AllowedFileFormat.markdown, "", True),
+    (AllowedFileFormat.markdown, Representation.editor, False),
     (AllowedFileFormat.confluencewiki, Representation.wiki, False),
     (AllowedFileFormat.html, Representation.editor, False),
     (AllowedFileFormat.none, "", True),
@@ -23,7 +26,7 @@ ids = map(
     argvalues=arg_values,
     ids=ids,
 )
-def test_get_representation(file_format, representation, exception):
+def test_get_representation_for_format(file_format, representation, exception):
     if exception:
         with pytest.raises(ValueError):
             get_representation_for_format(file_format)

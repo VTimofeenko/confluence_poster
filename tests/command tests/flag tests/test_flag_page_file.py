@@ -1,16 +1,19 @@
+from functools import partial
+
+from bs4 import BeautifulSoup
+
 import pytest
 from typer.testing import CliRunner, Result
+
 from confluence_poster.main import app
 from utils import (
     generate_run_cmd,
     run_with_config,
     generate_fake_page,
-    join_input,
     create_single_page_input,
     get_page_id_from_stdout,
     get_page_body,
 )
-from functools import partial
 
 pytestmark = pytest.mark.online
 
@@ -32,10 +35,30 @@ def test_post_page_with_real_file(make_one_page_config, tmp_path):
     assert get_page_body(get_page_id_from_stdout(result.stdout)) == f"<p>{content}</p>"
 
 
-# test with format and without
-def test_post_new_page_stdin(make_one_page_config, tmp_path):
+@pytest.mark.parametrize(
+    "file_format",
+    ("html", "confluencewiki", "markdown"),
+    ids=lambda _format: "`confluence_poster --page-file - --force-create post-page "
+    f"--create-in-space-root --file-format {_format}`",
+)
+def test_post_new_page_stdin(make_one_page_config, tmp_path, file_format):
+    """Tests posting three sources with the effectively same text"""
     config_file, config = make_one_page_config
-    _, content, page_file = generate_fake_page(tmp_path)
+
+    content = {
+        "html": """<h1>Title</h1>
+<ul>
+<li>one</li>
+<li>two</li>
+</ul>""",
+        "confluencewiki": """h1. Title
+* one
+* two""",
+        "markdown": """# Title
+* one
+* two""",
+    }
+
     result: Result = run_with_config(
         config_file=config_file,
         other_args=[
@@ -44,16 +67,57 @@ def test_post_new_page_stdin(make_one_page_config, tmp_path):
             "post-page",
             "--create-in-space-root",
             "--file-format",
-            "confluencewiki",
+            file_format,
         ],
-        input=content,
+        input=content[file_format],
     )
     assert result.exit_code == 0
-    assert get_page_body(get_page_id_from_stdout(result.stdout)) == f"<p>{content}</p>"
+    assert BeautifulSoup(
+        get_page_body(get_page_id_from_stdout(result.stdout)),
+        features="lxml",
+    ) == BeautifulSoup(
+        content["html"],
+        features="lxml",
+    )
 
 
-def test_convert_markdown():
-    pass
+@pytest.mark.parametrize(
+    "text_source",
+    ("-", "file"),
+    ids=lambda source: f"`confluence_poster --page-file {source} convert-markdown",
+)
+def test_convert_markdown(make_one_page_config, tmp_path, text_source):
+    config_file, config = make_one_page_config
+    md_text = "# Header\nTest\n\n* One\n* Two"
+    if text_source == "file":
+        md_file = tmp_path / "file.md"
+        md_file.write_text(md_text)
+        _source = md_file
+        _input = ""
+    else:
+        _source = "-"
+        _input = md_text
+
+    result: Result = run_with_config(
+        config_file=config_file,
+        other_args=[
+            _source,
+            "--force-create",
+            "convert-markdown",
+        ],
+        input=_input,
+    )
+    assert result.exit_code == 0
+    assert (
+        result.stdout
+        == """<h1>Header</h1>
+<p>Test</p>
+<ul>
+<li>One</li>
+<li>Two</li>
+</ul>
+"""
+    )
 
 
 @pytest.mark.parametrize(

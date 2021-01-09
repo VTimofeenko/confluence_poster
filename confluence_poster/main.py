@@ -15,12 +15,15 @@ from confluence_poster.config_wizard import DialogParameter, generate_page_dialo
 from confluence_poster.main_helpers import (
     check_last_updated_by,
     PostedPage,
-    guess_file_format,
-    get_representation_for_format,
     StateConfig,
     get_page_url,
 )
-from confluence_poster.convert_markdown_utils import post_to_convert_api
+from confluence_poster.convert_utils import (
+    guess_file_format,
+    get_representation_for_format,
+    post_to_convert_api,
+    convert_using_markdown_lib,
+)
 from confluence_poster.page_creation_helpers import create_page
 from confluence_poster.file_upload_helpers import attach_files_to_page
 
@@ -70,17 +73,22 @@ state = StateConfig()
 @app.command()
 def convert_markdown(
     use_confluence_converter: Optional[bool] = typer.Option(
-        True,
+        False,
         "--use-confluence-converter",
         show_default=False,
-        help="Use built-in Confluence converter. Note: uses Confluence private API",
+        help="Use built-in Confluence converter. Note: uses Confluence private API.",
     )
 ):
     """Converts single page text from markdown to html representation (aka "editor"). Prints the converted text.
-    Implies running the utility with --quiet. Outputs only to stderr."""
+    Implies running the utility with --quiet. Logs runtime info only to stderr.
+
+    By default uses python's markdown library with fenced code and tables extensions to render markdown to html.
+
+    If --use-confluence-converter flag is used - uses Confluence built-in converter."""
     confluence = state.confluence_instance
     always_echo = state.always_print_function
     echo_err = state.print_stderr
+    text = state.config.pages[0].page_text
 
     if len(state.config.pages) > 1:
         echo_err("This command supports converting only one page at a time.")
@@ -89,11 +97,14 @@ def convert_markdown(
     if use_confluence_converter:
         echo_err(
             "Using the converter built into Confluence which is labeled as private API. "
-            "Consider using external tool",
+            "The results may be less than satisfactory."
         )
-        always_echo(post_to_convert_api(confluence, state.config.pages[0].page_text))
+        always_echo(post_to_convert_api(confluence, text))
+    else:
+        always_echo(convert_using_markdown_lib(text))
+
     echo_err(
-        "Submit the converted text using `confluence_poster post-page --file-format html`",
+        "Submit the converted text using `confluence_poster post-page --file-format html`.",
     )
 
 
@@ -188,10 +199,14 @@ def post_page(
             except ValueError as e:
                 echo_err(
                     "Could not guess the file format. Consider specifying it manually. "
-                    "See --help for information",
+                    "See --help for information.",
                 )
                 raise e
+            echo(f"Guessed file format as {guessed_format.value}")
             page.page_file_format = guessed_format
+
+        if page.page_file_format is AllowedFileFormat.markdown:
+            page.page_text = convert_using_markdown_lib(page.page_text)
 
         echo(f"Looking for page '{page.page_title}'")
         if page_id := confluence.get_page_id(
@@ -314,8 +329,6 @@ def create_config(
     from functools import partial
 
     echo = state.print_function
-    always_echo = state.always_print_function
-    echo_err = state.print_stderr
     confirm = state.confirm_function
     prompt = state.prompt_function
 
@@ -369,13 +382,11 @@ def create_config(
     page_add_dialog = partial(page_add_dialog, config_print_function=_print_config_file)
 
     # Initial prompt
-    state.print_function("Starting config wizard.")
-    state.print_function(
-        "This wizard will guide you through creating the configuration files."
-    )
+    echo("Starting config wizard.")
+    echo("This wizard will guide you through creating the configuration files.")
     answer = ""
     if not any([local_only, home_only]):
-        state.print_function(
+        echo(
             "Since neither '--local-only' nor '--home-only' were specified, wizard will guide you through creating "
             f"config files in {home_config_location.parent}(XDG_CONFIG_HOME) and {Path.cwd()}(local directory)"
         )
@@ -404,9 +415,7 @@ def create_config(
 
     if home_only:
         # If --home-only is specified - no need to create another one in local folder
-        state.print_function(
-            "--home-only specified, not attempting to create any more configs."
-        )
+        echo("--home-only specified, not attempting to create any more configs.")
         raise typer.Exit()
 
     if not local_only:
@@ -419,7 +428,7 @@ def create_config(
             raise typer.Exit()
 
     # Create config in current working directory
-    state.print_function("Creating config in local directory.")
+    echo("Creating config in local directory.")
     local_config_name = prompt(
         "Please provide the name of local config", type=str, default=default_config_name
     )
