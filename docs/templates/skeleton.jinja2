@@ -1,6 +1,61 @@
 {% set section = typer_help_chapters['Description'] %}
 {{ section['intro'] }}
 
+May be used either on its own:
+
+    $ confluence_poster post-page
+
+As a filter:
+
+    $ cat file.md | confluence_poster --file-format markdown post-page
+
+# Getting started
+
+## Installation
+
+1. Install the project from PyPI:
+
+    ```console
+    $ pip install confluence-poster
+    ```
+
+2. Create the config manually ([sample available in repo](https://github.com/VTimofeenko/confluence_poster/blob/master/config.toml)) or run `confluence_poster create-config` to run a wizard
+
+## Sample usage
+
+Given the following files in the current directory:
+
+```
+├── attachment1.docx
+├── attachment2.png
+├── poster_config.toml
+└── page1.md
+```
+
+`poster_config.toml` has:
+
+```toml
+[pages]
+[pages.page1]
+page_title = "Some page"
+page_file = "page1.md"
+page_space = "SPACE"
+```
+
+config inside `${HOME}/.config/confluence_poster/` has the authentication information and the Confluence URL.
+
+Running
+
+```console
+$ confluence_poster --config poster_config.toml post-page --upload-files attachment1.docx attachment2.png
+```
+
+will attempt to locate the page on Confluence instance, update its content to the text in `page1.md` and attach the files to it.
+
+If the script cannot locate it, it will prompt the user to create it, optionally under a parent page.
+
+# Details
+
 {{ section['usage'] }}
 
 {{ section['options']|replace("Options", "General Options", 1) }}
@@ -29,21 +84,11 @@ These options can be specified for any `COMMAND` except for  `create-config` whi
 
 {{ section['options'] }}
 
-# Installation
-
-Install the project from PyPI:
-
-```console
-$ pip install confluence-poster
-```
-
-To start using `confluence_poster` either create the config manually or run `confluence_poster create-config` to start
-configuration wizard which will guide you through the configuration.
 
 # Config format
 
 By default the {{ tool_name }} tries to look for config file `config.toml` in the directory where it is invoked and in
-XDG_CONFIG_HOME. The config format is as follows:
+$XDG_CONFIG_HOME. The config format is as follows:
 
 ```toml
 {{ config_toml }}```
@@ -51,9 +96,18 @@ XDG_CONFIG_HOME. The config format is as follows:
 **Note on password and Cloud instances**: if confluence is hosted by Atlassian, the password is the API token.
 Follow instructions at [this link](https://confluence.atlassian.com/cloud/api-tokens-938839638.html).
 
+# Text formats
+
+{{ tool_name }} supports the following formats for posting pages:
+* [Confluencewiki](https://confluence.atlassian.com/doc/confluence-wiki-markup-251003035.html)
+* Markdown
+* Html
+
+The format may be specified explicitly in the config file, passed during the runtime, or the script will try to guess it by the file extension.
+
 # Contrib directory
 
-There are shell completions for bash and zsh as well as a sample of
+There are shell completions for bash and zsh(generated through [typer](typer.tiangolo.com/)) as well as a sample of
 [git post-commit hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks).
 
 # See also

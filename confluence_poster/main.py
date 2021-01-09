@@ -111,7 +111,7 @@ def convert_markdown(
 @app.command()
 def post_page(
     upload_files: Optional[bool] = typer.Option(
-        False, "--upload-files", show_default=False, help="Upload list of files"
+        False, "--upload-files", show_default=False, help="Upload list of files."
     ),
     version_comment: Optional[str] = typer.Option(
         None,
@@ -122,7 +122,8 @@ def post_page(
     create_in_space_root: Optional[bool] = typer.Option(
         False,
         "--create-in-space-root",
-        help="Create the page in space root",
+        show_default=False,
+        help="Create the page in space root.",
     ),
     file_format: Optional[AllowedFileFormat] = typer.Option(
         AllowedFileFormat.none,
@@ -312,10 +313,16 @@ def validate(
 @app.command()
 def create_config(
     local_only: Optional[bool] = typer.Option(
-        False, "--local-only", help="Create config only in the local folder"
+        False,
+        "--local-only",
+        show_default=False,
+        help="Create config only in the local folder.",
     ),
     home_only: Optional[bool] = typer.Option(
-        False, "--home-only", help="Create config only in the $XDG_CONFIG_HOME"
+        False,
+        "--home-only",
+        show_default=False,
+        help="Create config only in the $XDG_CONFIG_HOME.",
     ),
 ):
     """Runs configuration wizard. The wizard guides through setting up values for config."""
@@ -456,7 +463,7 @@ def create_config(
 def main(
     ctx: typer.Context,
     version: Optional[bool] = typer.Option(
-        None, "--version", help="Show version and exit", callback=version_callback
+        None, "--version", help="Show version and exit.", callback=version_callback
     ),
     config: Path = typer.Option(
         default=default_config_name,
@@ -475,7 +482,7 @@ def main(
     ),
     page_file: Optional[Path] = typer.Option(
         None,
-        help="Provide the path to the file containing page text. Allows passing '-' to read from stdin",
+        help="Provide the path to the file containing page text. Allows passing '-' to read from stdin.",
     ),
     password: Optional[str] = typer.Option(
         None, help="Supply the password in command line.", envvar="CONFLUENCE_PASSWORD"
@@ -485,7 +492,7 @@ def main(
         "--force",
         show_default=False,
         help="Force overwrite the pages. Skips all checks for different author of the updated page. "
-        "To set for individual pages you can specify field 'force_overwrite' in config",
+        "To set for individual pages you can specify field 'force_overwrite' in config.",
     ),
     force_create: Optional[bool] = typer.Option(
         False,
@@ -519,8 +526,9 @@ def main(
         help="Suppresses certain output.",
     ),
 ):
-    """Supplementary script for writing confluence wiki articles in
-    vim. Uses information from the config to post the article content to confluence.
+    """Supplementary script for writing Confluence articles in
+    local editor. Uses information from the config to post the article content to confluence.
+
     """
 
     if ctx.invoked_subcommand == "convert-markdown":

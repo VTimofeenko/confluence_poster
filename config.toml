@@ -18,6 +18,8 @@ page_space = "some_space_key"
 force_overwrite = false
 # If specified - the page will be created without looking for a parent under specified parent
 page_parent_title = "Parent page title"
+# If specified - script will convert the text in the file before posting it. If not specified - script will try to guess it based on file extension.
+page_file_format = "confluencewiki"
 
 [pages.page2]
 page_title = "Some other page title"
