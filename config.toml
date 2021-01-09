@@ -26,12 +26,12 @@ page_title = "Some other page title"
 page_file = "some_other_file.confluencewiki"
 
 [auth]
-# URL of confluence instance
+# URL of Confluence instance
 confluence_url = "https://confluence.local"
 # Username for authentication
 username = "confluence_username"
 # Password may also be supplied through --password option or from an environment variable CONFLUENCE_PASSWORD
 password = "confluence_password"
-# Whether the confluence instance is a "cloud" one
+# Whether the Confluence instance is a "cloud" one
 is_cloud = false
 

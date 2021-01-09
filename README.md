@@ -7,7 +7,7 @@ May be used either on its own:
 
     $ confluence_poster post-page
 
-As a filter:
+Or as a filter:
 
     $ cat file.md | confluence_poster --file-format markdown post-page
 
@@ -21,9 +21,13 @@ As a filter:
     $ pip install confluence-poster
     ```
 
-2. Create the config manually ([sample available in repo](https://github.com/VTimofeenko/confluence_poster/blob/master/config.toml)) or run `confluence_poster create-config` to run a wizard
+2. Create the config manually
+([sample available in repo](https://github.com/VTimofeenko/confluence_poster/blob/master/config.toml)) or run `confluence_poster create-config` to run a configuration wizard
 
 ## Sample usage
+
+User edits the page text and keeps it in file `page1.md`.
+Two files `attachment1.docx` and `attachment2.docx` need to be attached to the page.
 
 Given the following files in the current directory:
 
@@ -34,7 +38,7 @@ Given the following files in the current directory:
 └── page1.md
 ```
 
-`poster_config.toml` has:
+`poster_config.toml` contains:
 
 ```toml
 [pages]
@@ -44,7 +48,7 @@ page_file = "page1.md"
 page_space = "SPACE"
 ```
 
-config inside `${HOME}/.config/confluence_poster/` has the authentication information and the Confluence URL.
+config inside `${HOME}/.config/confluence_poster/` contains the authentication information and the Confluence URL.
 
 Running
 
@@ -52,9 +56,9 @@ Running
 $ confluence_poster --config poster_config.toml post-page --upload-files attachment1.docx attachment2.png
 ```
 
-will attempt to locate the page on Confluence instance, update its content to the text in `page1.md` and attach the files to it.
+will attempt to locate the page on Confluence, update its content with the text in `page1.md` and attach the files to it.
 
-If the script cannot locate it, it will prompt the user to create it, optionally under a parent page.
+If the script cannot locate the page by title, it will prompt the user to create it, optionally under a parent page.
 
 # Details
 
@@ -86,7 +90,7 @@ These options can be specified for any `COMMAND` except for  `create-config` whi
 
 **Commands**:
 
-* `convert-markdown`: Converts single page text from markdown to...
+* `convert-markdown`: Converts single page text to html.
 * `create-config`: Runs configuration wizard.
 * `post-page`: Posts the content of the pages.
 * `validate`: Validates the provided settings.
@@ -112,7 +116,7 @@ $ confluence_poster post-page [OPTIONS] [FILES]...
 
 ## `confluence_poster validate`
 
-Validates the provided settings. If 'online' is true - tries to fetch the space from the config using the
+Validates the provided settings. If 'online' flag is passed - tries to fetch the space from the config using the
 supplied credentials.
 
 **Usage**:
@@ -123,12 +127,12 @@ $ confluence_poster validate [OPTIONS]
 
 **Options**:
 
-* `--online`: Test the provided authentication settings on the actual instance of confluence.
+* `--online`: Test the provided authentication settings on the actual instance of Confluence.
 * `--help`: Show this message and exit.
 
 ## `confluence_poster create-config`
 
-Runs configuration wizard. The wizard guides through setting up values for config.
+Runs configuration wizard. The wizard guides through setting up values for configuration file.
 
 **Options**:
 
@@ -137,10 +141,10 @@ Runs configuration wizard. The wizard guides through setting up values for confi
 * `--help`: Show this message and exit.
 
 
-# Config format
+# Configuration file format
 
-By default the confluence_poster tries to look for config file `config.toml` in the directory where it is invoked and in
-$XDG_CONFIG_HOME. The config format is as follows:
+By default the confluence_poster tries to look for configuration file `config.toml` in the directory where it is invoked and in
+$XDG_CONFIG_HOME. The format is as follows:
 
 ```toml
 # If the page was not updated by the username specified here, throw an error.
@@ -171,32 +175,32 @@ page_title = "Some other page title"
 page_file = "some_other_file.confluencewiki"
 
 [auth]
-# URL of confluence instance
+# URL of Confluence instance
 confluence_url = "https://confluence.local"
 # Username for authentication
 username = "confluence_username"
 # Password may also be supplied through --password option or from an environment variable CONFLUENCE_PASSWORD
 password = "confluence_password"
-# Whether the confluence instance is a "cloud" one
+# Whether the Confluence instance is a "cloud" one
 is_cloud = false
 
 ```
 
-**Note on password and Cloud instances**: if confluence is hosted by Atlassian, the password is the API token.
+**Note on password and Cloud instances**: if Confluence instance is hosted by Atlassian, the password is the API token.
 Follow instructions at [this link](https://confluence.atlassian.com/cloud/api-tokens-938839638.html).
 
-# Text formats
+# File formats
 
 confluence_poster supports the following formats for posting pages:
 * [Confluencewiki](https://confluence.atlassian.com/doc/confluence-wiki-markup-251003035.html)
 * Markdown
 * Html
 
-The format may be specified explicitly in the config file, passed during the runtime, or the script will try to guess it by the file extension.
+The format may be specified explicitly in the configuration file, passed during the runtime, or the script will try to guess it by the file extension.
 
 # Contrib directory
 
-There are shell completions for bash and zsh(generated through [typer](typer.tiangolo.com/)) as well as a sample of
+There are shell completions for bash and zsh (generated through [typer](typer.tiangolo.com/)) as well as a sample of
 [git post-commit hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks).
 
 # See also

@@ -79,8 +79,10 @@ def convert_markdown(
         help="Use built-in Confluence converter. Note: uses Confluence private API.",
     )
 ):
-    """Converts single page text from markdown to html representation (aka "editor"). Prints the converted text.
+    """Converts single page text to html. Prints the converted text.
     Implies running the utility with --quiet. Logs runtime info only to stderr.
+
+    When the page is posted, "editor" representation should be used.
 
     By default uses python's markdown library with fenced code and tables extensions to render markdown to html.
 
@@ -283,10 +285,10 @@ def validate(
         "--online",
         show_default=False,
         help="Test the provided authentication settings on the actual"
-        " instance of confluence.",
+        " instance of Confluence.",
     )
 ):
-    """Validates the provided settings. If 'online' is true - tries to fetch the space from the config using the
+    """Validates the provided settings. If 'online' flag is passed - tries to fetch the space from the config using the
     supplied credentials."""
     echo = state.print_function
     echo_err = state.print_stderr
@@ -325,7 +327,7 @@ def create_config(
         help="Create config only in the $XDG_CONFIG_HOME.",
     ),
 ):
-    """Runs configuration wizard. The wizard guides through setting up values for config."""
+    """Runs configuration wizard. The wizard guides through setting up values for configuration file."""
     import xdg
     from confluence_poster.config_wizard import (
         config_dialog,
