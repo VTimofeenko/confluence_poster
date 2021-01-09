@@ -83,7 +83,7 @@ def determine_location(
         while confirm(
             f"Should the script look for a parent in space {page.page_space}?"
             f" (N to be prompted to create the page in the space root)\n"
-            f"Hint: you can pass --create-in-root or --parent-page-title to skip this prompt."
+            f"Hint: you can pass --create-in-space-root or --parent-page-title to skip this prompt."
         ):
             parent_title = _prompt_for_parent(state)
             if parent_id := _find_parent(
