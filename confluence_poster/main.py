@@ -529,7 +529,7 @@ def main(
     ),
 ):
     """Supplementary script for writing Confluence articles in
-    local editor. Uses information from the config to post the article content to confluence.
+    local editor. Uses information from the config to post the article content to Confluence.
 
     """
 
