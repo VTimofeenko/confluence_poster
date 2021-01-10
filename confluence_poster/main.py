@@ -341,7 +341,9 @@ def create_config(
     confirm = state.confirm_function
     prompt = state.prompt_function
 
-    home_config_location = xdg.xdg_config_home() / "confluence_poster/config.toml"
+    home_config_location = (
+        Path(xdg.BaseDirectory.xdg_config_home()) / "confluence_poster/config.toml"
+    )
 
     all_params = (
         DialogParameter(

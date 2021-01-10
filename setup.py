@@ -25,11 +25,10 @@ setup(
         "typer>=0.3.2",
         "toml",
         "requests",
-        "xdg>=5.0.1",
+        "pyxdg==0.26",
         "tomlkit==0.7.0",
         "click>=7.1.1, <7.2.0",
         "markdown==3.3.3",
-        "marshmallow==3.10.0",
     ],
     python_requires=">=3.8, <4",
     tests_require=[
@@ -39,6 +38,7 @@ setup(
         "beautifulsoup4==4.9.3",
         "bs4",
         "lxml",
+        "marshmallow==3.10.0",
     ],
     extras_require={"docs": ["jinja2", "typer-cli"]},
     classifiers=[
