@@ -25,6 +25,7 @@ def locate_real_confluence_config_file(config_name="local_config.toml"):
 # The config filename for testing against local instance
 real_confluence_config = locate_real_confluence_config_file()
 other_user_config = locate_real_confluence_config_file("local_config_other_user.toml")
+repo_config_path = locate_real_confluence_config_file("config.toml")
 
 if Path(real_confluence_config).exists():
     real_config = Config(real_confluence_config)

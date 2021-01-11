@@ -27,7 +27,7 @@ from confluence_poster.convert_utils import (
 from confluence_poster.page_creation_helpers import create_page
 from confluence_poster.file_upload_helpers import attach_files_to_page
 
-__version__ = "1.4.0"
+__version__ = "1.4.1"
 default_config_name = "config.toml"
 
 
@@ -328,7 +328,7 @@ def create_config(
     ),
 ):
     """Runs configuration wizard. The wizard guides through setting up values for configuration file."""
-    import xdg
+    import xdg.BaseDirectory
     from confluence_poster.config_wizard import (
         config_dialog,
         get_filled_attributes_from_file,
@@ -341,7 +341,9 @@ def create_config(
     confirm = state.confirm_function
     prompt = state.prompt_function
 
-    home_config_location = xdg.xdg_config_home() / "confluence_poster/config.toml"
+    home_config_location = (
+        Path(xdg.BaseDirectory.xdg_config_home) / "confluence_poster/config.toml"
+    )
 
     all_params = (
         DialogParameter(
@@ -529,7 +531,7 @@ def main(
     ),
 ):
     """Supplementary script for writing Confluence articles in
-    local editor. Uses information from the config to post the article content to confluence.
+    local editor. Uses information from the config to post the article content to Confluence.
 
     """
 

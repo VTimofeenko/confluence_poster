@@ -4,7 +4,6 @@ from utils import generate_run_cmd
 from pathlib import Path
 import pytest
 
-
 pytestmark = pytest.mark.offline
 
 runner = CliRunner()
@@ -21,6 +20,8 @@ def setup_env_dirs(tmp_path, monkeypatch):
     cwd.mkdir()
 
     monkeypatch.setenv("XDG_CONFIG_HOME", str(new_home))
+    monkeypatch.setattr("xdg.BaseDirectory.xdg_config_home", str(new_home))
+
     monkeypatch.chdir(cwd)
 
 
@@ -168,6 +169,7 @@ def test_dialog_home_directory_created(tmp_path, monkeypatch):
     new_home_config: Path = tmp_path / "new_home"  # new_home to override the fixture
     new_home_config.mkdir()
     monkeypatch.setenv("XDG_CONFIG_HOME", str(new_home_config))
+    monkeypatch.setattr("xdg.BaseDirectory.xdg_config_home", str(new_home_config))
     assert not (new_home_config / "confluence_poster").exists()
     _input = (
         "",
@@ -179,5 +181,6 @@ def test_dialog_home_directory_created(tmp_path, monkeypatch):
         "Y",  # save the edit
     )
 
-    default_run_cmd(input="\n".join(_input) + "\n", other_args=["--home-only"])
+    result = default_run_cmd(input="\n".join(_input) + "\n", other_args=["--home-only"])
+    assert result.exit_code == 0
     assert (new_home_config / "confluence_poster").exists()
