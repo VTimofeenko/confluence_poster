@@ -328,7 +328,7 @@ def create_config(
     ),
 ):
     """Runs configuration wizard. The wizard guides through setting up values for configuration file."""
-    import xdg
+    import xdg.BaseDirectory
     from confluence_poster.config_wizard import (
         config_dialog,
         get_filled_attributes_from_file,
@@ -342,7 +342,7 @@ def create_config(
     prompt = state.prompt_function
 
     home_config_location = (
-        Path(xdg.BaseDirectory.xdg_config_home()) / "confluence_poster/config.toml"
+        Path(xdg.BaseDirectory.xdg_config_home) / "confluence_poster/config.toml"
     )
 
     all_params = (

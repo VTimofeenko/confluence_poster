@@ -34,10 +34,13 @@ def load_config(local_config: Path) -> Config:
     """Function that goes through the config directories trying to load the config.
     Reads configs from XDG_CONFIG_DIRS, then from XDG_CONFIG_HOME, then the local one - either the default one, or
     supplied through command line."""
-    from xdg import BaseDirectory
+    import xdg.BaseDirectory
+    from importlib import reload
+
+    reload(xdg.BaseDirectory)
 
     final_config = UserDict()
-    for path in list(BaseDirectory.load_config_paths("confluence_poster"))[:-1]:
+    for path in list(xdg.BaseDirectory.load_config_paths("confluence_poster"))[::-1]:
         config_path = Path(path) / "config.toml"
         if config_path.exists():
             final_config = dict(

@@ -4,8 +4,19 @@ from pathlib import Path
 import pytest
 
 from confluence_poster.poster_config import Config
+from confluence_poster.config_loader import load_config
 
 pytestmark = pytest.mark.offline
+
+
+@pytest.fixture(scope="function", autouse=True)
+def reload_xdg_module():
+    """Needed because monkeypatch may pollute mass runs."""
+    from importlib import reload
+    import xdg.BaseDirectory
+
+    reload(xdg.BaseDirectory)
+    yield
 
 
 @pytest.fixture(scope="function")
@@ -63,8 +74,6 @@ def test_config_construct(tmp_path, setup_xdg_dirs, monkeypatch, dir_undefined):
     config_file = mk_tmp_file(tmp_path=tmp_path, key_to_pop="auth")
     monkeypatch.setenv("XDG_CONFIG_HOME", str(my_xdg_config_home))
     monkeypatch.setenv("XDG_CONFIG_DIRS", str(my_xdg_config_dirs))
-    # To be run after monkeypatch
-    from confluence_poster.config_loader import load_config, merge_configs
 
     _ = load_config(local_config=config_file)
     repo_config = Config(repo_config_path)
@@ -91,7 +100,6 @@ def test_util_merge():
 
 def test_no_configs_except_local(monkeypatch):
     """Checks that the script works if only the local config exists"""
-    from confluence_poster.config_loader import load_config
 
     monkeypatch.setenv("XDG_CONFIG_HOME", str(None))
     monkeypatch.setenv("XDG_CONFIG_DIRS", str(None))
@@ -101,10 +109,9 @@ def test_no_configs_except_local(monkeypatch):
 
 
 def test_multiple_xdg_config_dirs(tmp_path, setup_xdg_dirs, monkeypatch):
-    """Checks that the value from leftmost XGD_CONFIG_DIRS is the applied one"""
+    """Checks that the value from leftmost XDG_CONFIG_DIRS is the applied one"""
     my_xdg_config_dirs, _ = setup_xdg_dirs
     monkeypatch.setenv("XDG_CONFIG_DIRS", my_xdg_config_dirs)
-    from confluence_poster.config_loader import load_config
 
     my_xdg_config_dirs = my_xdg_config_dirs.split(":")
 
