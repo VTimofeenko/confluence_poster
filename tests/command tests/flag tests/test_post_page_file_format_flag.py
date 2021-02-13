@@ -58,3 +58,19 @@ def test_error_if_multiple_pages(tmp_path):
     )
     assert "Consider adding it to the config file." in result.stdout
     assert result.exit_code == 1
+
+
+def test_not_guessing_file_format_specified(make_one_page_config, tmp_path):
+    config_file, config = make_one_page_config
+    config_file = mk_tmp_file(
+        tmp_path=tmp_path,
+        config_to_clone=config_file,
+        key_to_update="pages.page1.page_file_format",
+        value_to_update="markdown",
+    )
+    result: Result = run_with_config(
+        config_file=config_file,
+        input=create_single_page_input,
+    )
+    assert result.exit_code == 0
+    assert "Trying to determine" not in result.stdout
