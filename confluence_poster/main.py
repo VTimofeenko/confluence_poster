@@ -176,7 +176,8 @@ def post_page(
         )
         raise typer.Exit(1)
 
-    posted_pages[0].page_file_format = file_format
+    if file_format is not AllowedFileFormat.none:
+        posted_pages[0].page_file_format = file_format
 
     if upload_files:
         if len(posted_pages) > 1:
