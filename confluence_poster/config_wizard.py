@@ -77,7 +77,7 @@ def _dialog_prompt(parameter: Union[DialogParameter, str], default_value=None) -
         message += [f"Current value is {default_value}. Press [Enter] to use it."]
 
     new_value = typer.prompt(
-        text="\n".join(message),
+        text="\n".join(message) + "\nValue",
         default=_default_value,
         type=parameter.type,
         hide_input=parameter.hide_input,
