@@ -270,7 +270,11 @@ def post_page(
                 always_echo(f"Not creating page '{page.page_title}'")
                 report.unprocessed_pages += [(page, page_created.comment)]
 
-        if upload_files and target_page.page_id is not None:
+        if (
+            upload_files
+            and target_page.page_id == page.page_id
+            and target_page.page_id is not None
+        ):
             attach_files_to_page(page=target_page, files=files, state=state)
 
     always_echo("Finished processing pages")
