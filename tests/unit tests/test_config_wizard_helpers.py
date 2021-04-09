@@ -220,6 +220,20 @@ def test_single_dialog_prompt(
             assert output not in captured.out
 
 
+def test_single_dialog_prompt_extra_line(monkeypatch, capsys):
+    """Checks that dialogs are output in the format
+    Title
+    Comment: foo
+    Value: <user input>
+    """
+    monkeypatch.setattr("sys.stdin", io.StringIO("value" + "\n"))
+    _dialog_prompt(
+        parameter=DialogParameter("Title", comment="Comment"),
+    )
+    captured = capsys.readouterr()
+    assert captured.out.count("\n") == 2
+
+
 def test_dialog_parameter_methods():
     inner_string = "title"
     d1 = DialogParameter(inner_string)
