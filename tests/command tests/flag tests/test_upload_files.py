@@ -174,6 +174,12 @@ def test_upload_files_multiple_pages_agree(setup_two_pages, gen_attachments):
     assert (
         len(confluence_instance.get_attachments_from_content(page_two)["results"]) == 0
     ), "The second page should not have any attachments"
+    assert (
+        result.output.count("Uploaded file") == 1
+    ), "The upload message should appear only once"
+    assert result.output.index("Uploaded file") < result.output.index(
+        page_two
+    ), "Upload message should appear before the information about second page"
 
 
 def test_upload_files_multiple_pages_default(setup_two_pages):
