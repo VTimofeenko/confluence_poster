@@ -26,9 +26,9 @@ setup(
         "toml",
         "requests",
         "pyxdg==0.26",
-        "tomlkit==0.7.0",
+        "tomlkit==0.7.2",
         "click>=7.1.1, <7.2.0",
-        "markdown==3.3.3",
+        "markdown==3.3.4",
     ],
     python_requires=">=3.8, <4",
     tests_require=[
