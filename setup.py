@@ -21,7 +21,7 @@ setup(
         "console_scripts": ["confluence_poster = confluence_poster.main:app"]
     },
     install_requires=[
-        "atlassian-python-api==3.8.0",
+        "atlassian-python-api==3.11.0",
         "typer>=0.3.2",
         "toml",
         "requests",
