@@ -38,7 +38,7 @@ setup(
         "beautifulsoup4==4.9.3",
         "bs4",
         "lxml",
-        "marshmallow==3.10.0",
+        "marshmallow>=3.12.1",
     ],
     extras_require={"docs": ["jinja2", "typer-cli"]},
     classifiers=[
