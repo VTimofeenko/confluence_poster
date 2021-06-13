@@ -5,7 +5,7 @@ here = pathlib.Path(__file__).parent.resolve()
 
 setup(
     name="confluence_poster",
-    version="1.4.2",
+    version="1.4.3",
     description="Script that updates Confluence articles from files written locally",
     long_description=(here / "README.md").read_text(encoding="utf-8"),
     long_description_content_type="text/markdown",
