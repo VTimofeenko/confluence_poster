@@ -27,7 +27,7 @@ from confluence_poster.convert_utils import (
 from confluence_poster.page_creation_helpers import create_page
 from confluence_poster.file_upload_helpers import attach_files_to_page
 
-__version__ = "1.4.3"
+__version__ = "1.4.4"
 default_config_name = "config.toml"
 
 
