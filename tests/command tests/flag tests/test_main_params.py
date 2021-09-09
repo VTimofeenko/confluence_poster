@@ -20,14 +20,6 @@ def teardown_state():
     state = StateConfig()
 
 
-def test_app_no_params_ok():
-    """Tests that passing no parameters works. Should output the help section"""
-    result = runner.invoke(app)
-    assert result.exit_code == 0
-    # Just gonna check the first line
-    assert main.__doc__.split("\n")[0] in result.stdout
-
-
 @pytest.mark.parametrize("config_file", [None, "other"])
 def test_different_config(tmp_path, config_file):
     """Tests that if the script reads from a specific config, not the default one
