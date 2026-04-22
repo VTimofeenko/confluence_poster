@@ -1,3 +1,8 @@
+> [!NOTE]  
+> The code here has not been updated for quite some time. Since last commit Atlassian fully deprecated locally hosted Confluence
+> I am leaving the code up as a public archive.
+
+
 # Description
 
 Supplementary script for writing Confluence articles in
